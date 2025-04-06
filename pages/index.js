@@ -564,29 +564,47 @@ export default function Home() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 2, sm: 3 } }}>
         <Head>
           <title>닌텐도 게임 가격 모니터</title>
           <meta name="description" content="닌텐도 스토어 게임 가격 모니터링 도구" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="icon" href="data:," />
         </Head>
 
-        <AppBar position="static" color="primary" sx={{ mb: 4, borderRadius: 1 }}>
-          <Toolbar>
-            <StorefrontIcon sx={{ mr: 2 }} />
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        <AppBar position="static" color="primary" sx={{ mb: { xs: 2, sm: 4 }, borderRadius: 1, boxShadow: 2 }}>
+          <Toolbar sx={{ flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+            <StorefrontIcon sx={{ mr: { xs: 1, sm: 2 } }} />
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                flexGrow: 1,
+                fontSize: { xs: '1rem', sm: '1.25rem' },
+                mb: { xs: games.length > 0 ? 1 : 0, sm: 0 }
+              }}
+            >
               닌텐도 게임 가격 모니터
             </Typography>
             {games.length > 0 && (
-              <>
+              <Box sx={{ 
+                display: 'flex', 
+                width: { xs: '100%', sm: 'auto' },
+                gap: 1
+              }}>
                 <Button 
                   variant="contained" 
                   color="secondary"
                   onClick={refreshAllGames}
                   disabled={refreshing}
                   startIcon={<RefreshIcon />}
-                  sx={{ mr: 1, fontWeight: 'bold' }}
+                  sx={{ 
+                    mr: { xs: 0, sm: 1 }, 
+                    fontWeight: 'bold',
+                    flex: { xs: 1, sm: 'auto' }
+                  }}
+                  size="small"
                 >
                   {refreshing ? '업데이트 중...' : '가격 업데이트'}
                 </Button>
@@ -596,18 +614,21 @@ export default function Home() {
                   onClick={clearAllGames}
                   startIcon={<DeleteIcon />}
                   size="small"
+                  sx={{ 
+                    flex: { xs: 1, sm: 'auto' }
+                  }}
                 >
                   모두 삭제
                 </Button>
-              </>
+              </Box>
             )}
           </Toolbar>
         </AppBar>
 
-        <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
+        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: { xs: 2, sm: 1 } }}>
           <form onSubmit={fetchGameInfo}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs>
+            <Grid container spacing={2} alignItems="center" direction={{ xs: 'column', sm: 'row' }}>
+              <Grid item xs={12} sm>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -620,7 +641,7 @@ export default function Home() {
                   sx={{ 
                     minWidth: '100%',
                     '& .MuiOutlinedInput-root': {
-                      fontSize: '0.95rem'
+                      fontSize: { xs: '0.85rem', sm: '0.95rem' }
                     },
                     '& .MuiInputBase-input': {
                       overflow: 'hidden',
@@ -632,7 +653,7 @@ export default function Home() {
                   }}
                 />
               </Grid>
-              <Grid item>
+              <Grid item xs={12} sm="auto" sx={{ width: { xs: '100%', sm: 'auto' } }}>
                 <Button
                   type="submit"
                   variant="contained"
@@ -640,6 +661,11 @@ export default function Home() {
                   size="large"
                   disabled={loading}
                   startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
+                  fullWidth
+                  sx={{
+                    height: '100%',
+                    minWidth: { xs: '100%', sm: '120px' }
+                  }}
                 >
                   {loading ? '로딩 중' : '추가'}
                 </Button>
@@ -654,20 +680,33 @@ export default function Home() {
         </Paper>
 
         <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h5" component="h2">
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            mb: 2,
+            gap: { xs: 0.5, sm: 0 } 
+          }}>
+            <Typography variant="h5" component="h2" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
               모니터링 중인 게임
             </Typography>
             {lastRefreshed && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography 
+                variant="caption" 
+                color="text.secondary"
+                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+              >
                 마지막 업데이트: {formattedLastRefreshed}
               </Typography>
             )}
           </Box>
           
           {games.length === 0 ? (
-            <Paper elevation={1} sx={{ p: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">아직 모니터링 중인 게임이 없습니다.</Typography>
+            <Paper elevation={1} sx={{ p: 4, textAlign: 'center', borderRadius: { xs: 2, sm: 1 } }}>
+              <Typography color="text.secondary" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
+                아직 모니터링 중인 게임이 없습니다.
+              </Typography>
             </Paper>
           ) : (
             <Grid container spacing={2}>
@@ -677,19 +716,28 @@ export default function Home() {
                     elevation={2} 
                     sx={{ 
                       '&:hover': { boxShadow: 6 },
-                      transition: 'box-shadow 0.3s'
+                      transition: 'box-shadow 0.3s',
+                      borderRadius: { xs: 2, sm: 1 }
                     }}
                   >
-                    <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
                       <Grid container alignItems="center" spacing={2}>
                         <Grid item xs>
-                          <Typography variant="h6" gutterBottom>
+                          <Typography 
+                            variant="h6" 
+                            gutterBottom
+                            sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, mb: 0.5 }}
+                          >
                             {game.title || '제목 없음'}
                           </Typography>
                           <Typography 
                             variant="h5" 
                             color="success.main" 
-                            sx={{ fontWeight: 'bold', mb: 1 }}
+                            sx={{ 
+                              fontWeight: 'bold', 
+                              mb: 1,
+                              fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                            }}
                           >
                             {game.price || '가격 정보 없음'}
                           </Typography>
@@ -701,12 +749,13 @@ export default function Home() {
                                 size="small" 
                                 color="error"
                                 label={`${game.discountInfo.discountRate}% 할인`}
-                                sx={{ fontWeight: 'bold' }}
+                                sx={{ fontWeight: 'bold', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                               />
                               <Typography 
                                 variant="body2" 
                                 color="error.main"
                                 fontWeight="500"
+                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
                               >
                                 {game.discountInfo.formattedDiscount}
                               </Typography>
@@ -719,6 +768,7 @@ export default function Home() {
                               label={`추가일: ${new Date(game.addedAt).toLocaleDateString()}`}
                               color="default"
                               variant="outlined"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                             />
                             {game.priceHistory && game.priceHistory.length > 0 && (
                               <Chip 
@@ -728,6 +778,7 @@ export default function Home() {
                                 color="primary"
                                 onClick={() => handleGameSelect(game)}
                                 clickable
+                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                               />
                             )}
                           </Box>
@@ -786,32 +837,67 @@ export default function Home() {
           onClose={handleCloseChart}
           maxWidth="md"
           fullWidth
+          sx={{
+            '& .MuiDialog-paper': {
+              mx: { xs: 1, sm: 2 },
+              width: { xs: 'calc(100% - 16px)', sm: 'auto' },
+              borderRadius: { xs: 2, sm: 1 }
+            }
+          }}
         >
           {selectedGame && (
             <>
-              <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6">
+              <DialogTitle sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                p: { xs: 1.5, sm: 2 }
+              }}>
+                <Typography 
+                  variant="h6"
+                  sx={{ 
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                    mr: 2
+                  }}
+                >
                   {selectedGame.title} 가격 추이
                 </Typography>
                 <IconButton onClick={handleCloseChart} size="small">
                   <CloseIcon />
                 </IconButton>
               </DialogTitle>
-              <DialogContent dividers>
-                <Box sx={{ height: 300, mb: 3 }}>
+              <DialogContent 
+                dividers
+                sx={{
+                  p: { xs: 1.5, sm: 2 }
+                }}
+              >
+                <Box sx={{ height: { xs: 200, sm: 300 }, mb: { xs: 2, sm: 3 } }}>
                   <Line data={getChartData(selectedGame)} options={chartOptions} />
                 </Box>
                 <Divider sx={{ my: 2 }} />
-                <Typography variant="h6" gutterBottom>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom
+                  sx={{
+                    fontSize: { xs: '0.95rem', sm: '1.2rem' }
+                  }}
+                >
                   가격 기록
                 </Typography>
-                <Paper variant="outlined" sx={{ overflow: 'auto' }}>
-                  <Box sx={{ minWidth: 400 }}>
-                    <Table>
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    overflow: 'auto',
+                    maxHeight: { xs: 200, sm: 300 }
+                  }}
+                >
+                  <Box sx={{ minWidth: { xs: 280, sm: 400 } }}>
+                    <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell>날짜</TableCell>
-                          <TableCell>가격</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>날짜</TableCell>
+                          <TableCell sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>가격</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -820,8 +906,8 @@ export default function Home() {
                           .sort((a, b) => new Date(b.date) - new Date(a.date))
                           .map((record, index) => (
                             <TableRow key={index}>
-                              <TableCell>{record.date}</TableCell>
-                              <TableCell sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                              <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>{record.date}</TableCell>
+                              <TableCell sx={{ fontWeight: 'bold', color: 'success.main', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                                 {record.priceFormatted}
                               </TableCell>
                             </TableRow>
@@ -832,8 +918,17 @@ export default function Home() {
                   </Box>
                 </Paper>
               </DialogContent>
-              <DialogActions>
-                <Button onClick={handleCloseChart} color="primary">
+              <DialogActions sx={{ p: { xs: 1, sm: 1.5 } }}>
+                <Button 
+                  onClick={handleCloseChart} 
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                  sx={{ 
+                    mx: 'auto',
+                    px: { xs: 2, sm: 3 }
+                  }}
+                >
                   닫기
                 </Button>
               </DialogActions>
