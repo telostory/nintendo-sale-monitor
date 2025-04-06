@@ -139,8 +139,10 @@ export default function Home() {
     const updatedGames = [...games];
     let hasErrors = false;
     
-    // 현재 날짜 (YYYY-MM-DD 형식)
-    const today = new Date().toISOString().split('T')[0];
+    // 현재 날짜를 한국 시간(KST)으로 계산 (YYYY-MM-DD 형식)
+    const currentDate = new Date();
+    const koreaTime = new Date(currentDate.getTime() + (9 * 60 * 60 * 1000));
+    const today = koreaTime.toISOString().split('T')[0];
     
     for (let i = 0; i < updatedGames.length; i++) {
       const game = updatedGames[i];
@@ -228,9 +230,9 @@ export default function Home() {
     setGames(updatedGames);
     setRefreshing(false);
     
-    const now = new Date();
-    setLastRefreshed(now);
-    localStorage.setItem('lastRefreshed', now.toISOString());
+    const updateTime = new Date();
+    setLastRefreshed(updateTime);
+    localStorage.setItem('lastRefreshed', updateTime.toISOString());
     
     if (hasErrors) {
       setError('일부 게임의 가격 정보를 업데이트하는 데 실패했습니다');
@@ -254,8 +256,10 @@ export default function Home() {
     const updatedGames = [...games];
     let hasError = false;
     
-    // 현재 날짜 (YYYY-MM-DD 형식)
-    const today = new Date().toISOString().split('T')[0];
+    // 현재 날짜를 한국 시간(KST)으로 계산 (YYYY-MM-DD 형식)
+    const currentDateTime = new Date();
+    const koreaDateTime = new Date(currentDateTime.getTime() + (9 * 60 * 60 * 1000));
+    const today = koreaDateTime.toISOString().split('T')[0];
     
     try {
       const response = await fetch('/api/game-info', {
@@ -337,9 +341,9 @@ export default function Home() {
     setGames(updatedGames);
     setRefreshing(false);
     
-    const now = new Date();
-    setLastRefreshed(now);
-    localStorage.setItem('lastRefreshed', now.toISOString());
+    const updateTime = new Date();
+    setLastRefreshed(updateTime);
+    localStorage.setItem('lastRefreshed', updateTime.toISOString());
     
     if (hasError) {
       setError('게임 가격 정보를 업데이트하는 데 실패했습니다');
