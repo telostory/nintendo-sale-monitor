@@ -574,7 +574,11 @@ export default function Home() {
         </Head>
 
         <AppBar position="static" color="primary" sx={{ mb: { xs: 2, sm: 4 }, borderRadius: 1, boxShadow: 2 }}>
-          <Toolbar sx={{ flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+          <Toolbar sx={{ 
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            py: { xs: 2, sm: 1.5 },
+            px: { xs: 2, sm: 3 }
+          }}>
             <StorefrontIcon sx={{ mr: { xs: 1, sm: 2 } }} />
             <Typography 
               variant="h6" 
@@ -582,7 +586,7 @@ export default function Home() {
               sx={{ 
                 flexGrow: 1,
                 fontSize: { xs: '1rem', sm: '1.25rem' },
-                mb: { xs: games.length > 0 ? 1 : 0, sm: 0 }
+                mb: { xs: games.length > 0 ? 2 : 0, sm: 0 }
               }}
             >
               닌텐도 게임 가격 모니터
@@ -591,7 +595,7 @@ export default function Home() {
               <Box sx={{ 
                 display: 'flex', 
                 width: { xs: '100%', sm: 'auto' },
-                gap: 1
+                gap: 1.5
               }}>
                 <Button 
                   variant="contained" 
@@ -602,7 +606,8 @@ export default function Home() {
                   sx={{ 
                     mr: { xs: 0, sm: 1 }, 
                     fontWeight: 'bold',
-                    flex: { xs: 1, sm: 'auto' }
+                    flex: { xs: 1, sm: 'auto' },
+                    py: 1
                   }}
                   size="small"
                 >
@@ -615,7 +620,8 @@ export default function Home() {
                   startIcon={<DeleteIcon />}
                   size="small"
                   sx={{ 
-                    flex: { xs: 1, sm: 'auto' }
+                    flex: { xs: 1, sm: 'auto' },
+                    py: 1
                   }}
                 >
                   모두 삭제
@@ -627,8 +633,8 @@ export default function Home() {
 
         <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: { xs: 2, sm: 1 } }}>
           <form onSubmit={fetchGameInfo}>
-            <Grid container spacing={2} alignItems="center" direction={{ xs: 'column', sm: 'row' }}>
-              <Grid item xs={12} sm>
+            <Grid container spacing={2} alignItems="center" direction="column">
+              <Grid item xs={12} sx={{ width: '100%', maxWidth: '400px' }}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -653,7 +659,7 @@ export default function Home() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm="auto" sx={{ width: { xs: '100%', sm: 'auto' } }}>
+              <Grid item xs={12} sx={{ width: '100%', maxWidth: '400px' }}>
                 <Button
                   type="submit"
                   variant="contained"
@@ -664,7 +670,7 @@ export default function Home() {
                   fullWidth
                   sx={{
                     height: '100%',
-                    minWidth: { xs: '100%', sm: '120px' }
+                    py: 1.2
                   }}
                 >
                   {loading ? '로딩 중' : '추가'}
@@ -672,7 +678,7 @@ export default function Home() {
               </Grid>
             </Grid>
             {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
+              <Alert severity="error" sx={{ mt: 2, maxWidth: '400px', mx: 'auto' }}>
                 {error}
               </Alert>
             )}
@@ -686,7 +692,9 @@ export default function Home() {
             alignItems: { xs: 'flex-start', sm: 'center' },
             flexDirection: { xs: 'column', sm: 'row' },
             mb: 2,
-            gap: { xs: 0.5, sm: 0 } 
+            gap: { xs: 0.5, sm: 0 },
+            maxWidth: '800px',
+            mx: 'auto'
           }}>
             <Typography variant="h5" component="h2" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
               모니터링 중인 게임
@@ -703,13 +711,13 @@ export default function Home() {
           </Box>
           
           {games.length === 0 ? (
-            <Paper elevation={1} sx={{ p: 4, textAlign: 'center', borderRadius: { xs: 2, sm: 1 } }}>
+            <Paper elevation={1} sx={{ p: 4, textAlign: 'center', borderRadius: { xs: 2, sm: 1 }, maxWidth: '800px', mx: 'auto' }}>
               <Typography color="text.secondary" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                 아직 모니터링 중인 게임이 없습니다.
               </Typography>
             </Paper>
           ) : (
-            <Grid container spacing={2}>
+            <Grid container spacing={2} sx={{ maxWidth: '800px', mx: 'auto' }}>
               {games.map((game) => (
                 <Grid item xs={12} key={game.id}>
                   <Card 
@@ -720,7 +728,7 @@ export default function Home() {
                       borderRadius: { xs: 2, sm: 1 }
                     }}
                   >
-                    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
                       <Grid container alignItems="center" spacing={2}>
                         <Grid item xs>
                           <Typography 
