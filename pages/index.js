@@ -160,12 +160,48 @@ export default function Home() {
           const priceNumber = parseInt(newPrice.replace(/[^\d]/g, ''));
           
           const priceHistory = game.priceHistory || [];
+          
+          // 할인 정보 계산
+          let discountInfo = null;
+          
+          // 가격 기록이 있으면 이전 가격과 비교
+          if (priceHistory.length > 0) {
+            const lastRecord = [...priceHistory].sort((a, b) => 
+              new Date(b.date) - new Date(a.date)
+            )[0];
+            
+            const lastPrice = lastRecord.price;
+            
+            // 현재 가격이 이전 가격보다 낮을 경우 할인 정보 계산
+            if (priceNumber < lastPrice) {
+              const discountAmount = lastPrice - priceNumber;
+              const discountRate = Math.round((discountAmount / lastPrice) * 100);
+              
+              discountInfo = {
+                originalPrice: lastPrice,
+                discountAmount: discountAmount,
+                discountRate: discountRate,
+                formattedDiscount: `-₩${discountAmount.toLocaleString()}`
+              };
+            }
+          }
+          
           const todayRecordIndex = priceHistory.findIndex(record => record.date === today);
           
           if (todayRecordIndex >= 0) {
-            priceHistory[todayRecordIndex] = { date: today, price: priceNumber, priceFormatted: newPrice };
+            priceHistory[todayRecordIndex] = { 
+              date: today, 
+              price: priceNumber, 
+              priceFormatted: newPrice,
+              discountInfo: discountInfo
+            };
           } else {
-            priceHistory.push({ date: today, price: priceNumber, priceFormatted: newPrice });
+            priceHistory.push({ 
+              date: today, 
+              price: priceNumber, 
+              priceFormatted: newPrice,
+              discountInfo: discountInfo
+            });
           }
           
           priceHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -175,6 +211,7 @@ export default function Home() {
             title: data.title || game.title,
             price: newPrice,
             priceHistory: priceHistory,
+            discountInfo: discountInfo,
             lastUpdated: new Date().toISOString()
           };
         } else {
@@ -422,7 +459,8 @@ export default function Home() {
         <Head>
           <title>닌텐도 게임 가격 모니터</title>
           <meta name="description" content="닌텐도 스토어 게임 가격 모니터링 도구" />
-          <link rel="icon" href="/favicon.ico" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+          <link rel="apple-touch-icon" href="/favicon.svg" />
         </Head>
 
         <AppBar position="static" color="primary" sx={{ mb: 4, borderRadius: 1 }}>
@@ -470,6 +508,19 @@ export default function Home() {
                   onChange={(e) => setUrl(e.target.value)}
                   required
                   size="medium"
+                  sx={{ 
+                    minWidth: '100%',
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '0.95rem'
+                    },
+                    '& .MuiInputBase-input': {
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }
+                  }}
+                  inputProps={{
+                    style: { paddingRight: '14px' }
+                  }}
                 />
               </Grid>
               <Grid item>
@@ -533,6 +584,26 @@ export default function Home() {
                           >
                             {game.price || '가격 정보 없음'}
                           </Typography>
+                          
+                          {/* 할인 정보 표시 */}
+                          {game.discountInfo && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                              <Chip 
+                                size="small" 
+                                color="error"
+                                label={`${game.discountInfo.discountRate}% 할인`}
+                                sx={{ fontWeight: 'bold' }}
+                              />
+                              <Typography 
+                                variant="body2" 
+                                color="error.main"
+                                fontWeight="500"
+                              >
+                                {game.discountInfo.formattedDiscount}
+                              </Typography>
+                            </Box>
+                          )}
+                          
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                             <Chip 
                               size="small" 
