@@ -725,7 +725,7 @@ export default function Home() {
           ) : (
             <Grid container spacing={2} sx={{ maxWidth: '800px', mx: 'auto' }}>
               {games.map((game) => (
-                <Grid item xs={12} key={game.id}>
+                <Grid item xs={12} sm={12} md={12} lg={12} key={game.id}>
                   <Card 
                     elevation={2} 
                     sx={{ 
