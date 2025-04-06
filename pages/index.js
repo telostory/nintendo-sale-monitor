@@ -750,8 +750,8 @@ export default function Home() {
                     }}
                   >
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-                      <Grid container alignItems="center" spacing={2}>
-                        <Grid item xs>
+                      <Grid container alignItems="center" spacing={2} direction={{ xs: 'column', sm: 'row' }}>
+                        <Grid item xs={12} sm>
                           <Typography 
                             variant="h6" 
                             gutterBottom
@@ -812,8 +812,12 @@ export default function Home() {
                             )}
                           </Box>
                         </Grid>
-                        <Grid item>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Grid item xs={12} sm="auto" sx={{ mt: { xs: 2, sm: 0 }, alignSelf: { sm: 'center' } }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            gap: 1, 
+                            justifyContent: { xs: 'flex-end', sm: 'flex-end' } 
+                          }}>
                             <IconButton 
                               color="primary"
                               onClick={() => handleGameSelect(game)}
