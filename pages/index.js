@@ -237,6 +237,115 @@ export default function Home() {
     }
   };
 
+  // 특정 게임만 업데이트
+  const refreshGame = async (gameId) => {
+    if (refreshing) return;
+    
+    setRefreshing(true);
+    setError('');
+    
+    const gameIndex = games.findIndex(g => g.id === gameId);
+    if (gameIndex === -1) {
+      setRefreshing(false);
+      return;
+    }
+    
+    const game = games[gameIndex];
+    const updatedGames = [...games];
+    let hasError = false;
+    
+    // 현재 날짜 (YYYY-MM-DD 형식)
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+      const response = await fetch('/api/game-info', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: game.url }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const newPrice = data.price || game.price;
+        const priceNumber = parseInt(newPrice.replace(/[^\d]/g, ''));
+        
+        const priceHistory = game.priceHistory || [];
+        
+        // 할인 정보 계산
+        let discountInfo = null;
+        
+        // 가격 기록이 있으면 이전 가격과 비교
+        if (priceHistory.length > 0) {
+          const lastRecord = [...priceHistory].sort((a, b) => 
+            new Date(b.date) - new Date(a.date)
+          )[0];
+          
+          const lastPrice = lastRecord.price;
+          
+          // 현재 가격이 이전 가격보다 낮을 경우 할인 정보 계산
+          if (priceNumber < lastPrice) {
+            const discountAmount = lastPrice - priceNumber;
+            const discountRate = Math.round((discountAmount / lastPrice) * 100);
+            
+            discountInfo = {
+              originalPrice: lastPrice,
+              discountAmount: discountAmount,
+              discountRate: discountRate,
+              formattedDiscount: `-₩${discountAmount.toLocaleString()}`
+            };
+          }
+        }
+        
+        const todayRecordIndex = priceHistory.findIndex(record => record.date === today);
+        
+        if (todayRecordIndex >= 0) {
+          priceHistory[todayRecordIndex] = { 
+            date: today, 
+            price: priceNumber, 
+            priceFormatted: newPrice,
+            discountInfo: discountInfo
+          };
+        } else {
+          priceHistory.push({ 
+            date: today, 
+            price: priceNumber, 
+            priceFormatted: newPrice,
+            discountInfo: discountInfo
+          });
+        }
+        
+        priceHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        updatedGames[gameIndex] = {
+          ...game,
+          title: data.title || game.title,
+          price: newPrice,
+          priceHistory: priceHistory,
+          discountInfo: discountInfo,
+          lastUpdated: new Date().toISOString()
+        };
+      } else {
+        hasError = true;
+      }
+    } catch (error) {
+      hasError = true;
+    }
+    
+    setGames(updatedGames);
+    setRefreshing(false);
+    
+    const now = new Date();
+    setLastRefreshed(now);
+    localStorage.setItem('lastRefreshed', now.toISOString());
+    
+    if (hasError) {
+      setError('게임 가격 정보를 업데이트하는 데 실패했습니다');
+    }
+  };
+
   // 페이지 로드 시 자동으로 가격 정보 새로고침 (마지막 새로고침 후 1시간 지난 경우)
   useEffect(() => {
     if (games.length > 0 && !refreshing) {
@@ -460,7 +569,7 @@ export default function Home() {
           <title>닌텐도 게임 가격 모니터</title>
           <meta name="description" content="닌텐도 스토어 게임 가격 모니터링 도구" />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-          <link rel="apple-touch-icon" href="/favicon.svg" />
+          <link rel="icon" href="data:," />
         </Head>
 
         <AppBar position="static" color="primary" sx={{ mb: 4, borderRadius: 1 }}>
@@ -642,6 +751,15 @@ export default function Home() {
                               title="스토어에서 보기"
                             >
                               <LaunchIcon />
+                            </IconButton>
+                            <IconButton 
+                              color="primary"
+                              onClick={() => refreshGame(game.id)}
+                              size="small"
+                              disabled={refreshing}
+                              title="가격 갱신"
+                            >
+                              <RefreshIcon />
                             </IconButton>
                             <IconButton 
                               color="error"
