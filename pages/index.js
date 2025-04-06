@@ -579,18 +579,24 @@ export default function Home() {
             py: { xs: 2, sm: 1.5 },
             px: { xs: 2, sm: 3 }
           }}>
-            <StorefrontIcon sx={{ mr: { xs: 1, sm: 2 } }} />
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                flexGrow: 1,
-                fontSize: { xs: '1rem', sm: '1.25rem' },
-                mb: { xs: games.length > 0 ? 2 : 0, sm: 0 }
-              }}
-            >
-              닌텐도 게임 가격 모니터
-            </Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              mb: { xs: games.length > 0 ? 2 : 0, sm: 0 },
+              flexGrow: 1
+            }}>
+              <StorefrontIcon sx={{ mr: { xs: 1, sm: 2 }, fontSize: { xs: '1.5rem', sm: '1.8rem' } }} />
+              <Typography 
+                variant="h6" 
+                component="div" 
+                sx={{ 
+                  fontSize: { xs: '1rem', sm: '1.25rem' },
+                  lineHeight: 1.4
+                }}
+              >
+                닌텐도 게임 가격 모니터
+              </Typography>
+            </Box>
             {games.length > 0 && (
               <Box sx={{ 
                 display: 'flex', 
