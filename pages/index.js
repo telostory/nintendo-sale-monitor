@@ -750,7 +750,7 @@ export default function Home() {
                     }}
                   >
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-                      <Grid container alignItems="center" spacing={2} direction={{ xs: 'column', sm: 'row' }}>
+                      <Grid container alignItems="center" spacing={2}>
                         <Grid item xs={12} sm>
                           <Typography 
                             variant="h6" 
@@ -812,11 +812,10 @@ export default function Home() {
                             )}
                           </Box>
                         </Grid>
-                        <Grid item xs={12} sm="auto" sx={{ mt: { xs: 2, sm: 0 }, alignSelf: { sm: 'center' } }}>
+                        <Grid item xs="auto" sm="auto" sx={{ alignSelf: 'center' }}>
                           <Box sx={{ 
                             display: 'flex', 
-                            gap: 1, 
-                            justifyContent: { xs: 'flex-end', sm: 'flex-end' } 
+                            gap: 1
                           }}>
                             <IconButton 
                               color="primary"
