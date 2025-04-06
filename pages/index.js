@@ -723,12 +723,27 @@ export default function Home() {
               </Typography>
             </Paper>
           ) : (
-            <Grid container spacing={2} sx={{ maxWidth: '800px', mx: 'auto' }}>
+            <Grid 
+              container 
+              spacing={2} 
+              columns={12} 
+              direction="column"
+              sx={{ maxWidth: '800px', mx: 'auto' }}
+            >
               {games.map((game) => (
-                <Grid item xs={12} sm={12} md={12} lg={12} key={game.id}>
+                <Grid 
+                  item 
+                  xs={12} 
+                  sm={12} 
+                  md={12} 
+                  lg={12} 
+                  key={game.id}
+                  sx={{ width: '100%' }}
+                >
                   <Card 
                     elevation={2} 
                     sx={{ 
+                      width: '100%',
                       '&:hover': { boxShadow: 6 },
                       transition: 'box-shadow 0.3s',
                       borderRadius: { xs: 2, sm: 1 }
