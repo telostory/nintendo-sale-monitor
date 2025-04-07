@@ -68,7 +68,7 @@ export default function handler(req, res) {
     <div class="card">
       <h3 class="card-title">현재 Cron 설정</h3>
       <p><strong>경로:</strong> /api/update-prices</p>
-      <p><strong>스케줄:</strong> 0 1 * * * (매일 01:00 UTC, 한국시간 10:00)</p>
+      <p><strong>스케줄:</strong> 0 15 * * * (매일 15:00 UTC, 한국시간 00:00)</p>
       <p><strong>설명:</strong> 모든 게임의 가격을 자동으로 체크하고 데이터베이스에 저장합니다.</p>
     </div>
     
