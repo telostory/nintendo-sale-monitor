@@ -39,7 +39,10 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableRow
+  TableRow,
+  Switch,
+  Snackbar,
+  FormControlLabel
 } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -51,6 +54,7 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 
 // Chart.js 컴포넌트 등록
 ChartJS.register(
@@ -102,6 +106,9 @@ export default function Home() {
   const [lastRefreshed, setLastRefreshed] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
   const [chartDialogOpen, setChartDialogOpen] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [migrateLoading, setMigrateLoading] = useState(false);
 
   // 페이지 로드 시 로컬 스토리지에서 저장된 게임 목록 불러오기
   useEffect(() => {
@@ -128,6 +135,47 @@ export default function Home() {
       localStorage.setItem('monitoredGames', JSON.stringify(games));
     }
   }, [games]);
+
+  // MongoDB로 데이터 마이그레이션 및 자동 업데이트 활성화
+  const handleMigrateData = async () => {
+    if (games.length === 0) {
+      setSnackbarMessage('마이그레이션할 게임이 없습니다.');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    setMigrateLoading(true);
+    
+    try {
+      const response = await fetch('/api/migrate-to-db', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ games }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        const totalGames = result.totalGames || 0;
+        const insertedGames = result.insertedGames || 0;
+        const updatedGames = result.updatedGames || 0;
+        
+        setSnackbarMessage(`성공! ${totalGames}개의 게임이 매일 자정(00:00)에 자동으로 가격이 업데이트됩니다. (${insertedGames}개 추가, ${updatedGames}개 업데이트)`);
+        setSnackbarOpen(true);
+      } else {
+        setSnackbarMessage(`마이그레이션 실패: ${result.message || '알 수 없는 오류'}`);
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.error('마이그레이션 오류:', error);
+      setSnackbarMessage(`마이그레이션 오류: ${error.message}`);
+      setSnackbarOpen(true);
+    } finally {
+      setMigrateLoading(false);
+    }
+  };
 
   // 모든 게임의 최신 가격 정보 가져오기
   const refreshAllGames = async () => {
@@ -577,67 +625,52 @@ export default function Home() {
           <link rel="icon" href="data:," />
         </Head>
 
-        <AppBar position="static" color="primary" sx={{ mb: { xs: 2, sm: 4 }, borderRadius: 1, boxShadow: 2 }}>
-          <Toolbar sx={{ 
-            flexWrap: { xs: 'wrap', sm: 'nowrap' },
-            py: { xs: 2, sm: 1.5 },
-            px: { xs: 2, sm: 3 }
-          }}>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              mb: { xs: games.length > 0 ? 2 : 0, sm: 0 },
-              flexGrow: 1
-            }}>
-              <StorefrontIcon sx={{ mr: { xs: 1, sm: 2 }, fontSize: { xs: '1.5rem', sm: '1.8rem' } }} />
-              <Typography 
-                variant="h6" 
-                component="div" 
-                sx={{ 
-                  fontSize: { xs: '1rem', sm: '1.25rem' },
-                  lineHeight: 1.4
-                }}
-              >
+        <AppBar position="static" sx={{ backgroundColor: '#E60012', marginBottom: { xs: 2, md: 4 } }}>
+          <Toolbar sx={{ justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <StorefrontIcon sx={{ mr: 1 }} />
+              <Typography variant="h6" component="div">
                 닌텐도 게임 가격 모니터
               </Typography>
             </Box>
-            {games.length > 0 && (
-              <Box sx={{ 
-                display: 'flex', 
-                width: { xs: '100%', sm: 'auto' },
-                gap: 1.5
-              }}>
-                <Button 
-                  variant="contained" 
-                  color="secondary"
-                  onClick={refreshAllGames}
-                  disabled={refreshing}
-                  startIcon={<RefreshIcon />}
-                  sx={{ 
-                    mr: { xs: 0, sm: 1 }, 
-                    fontWeight: 'bold',
-                    flex: { xs: 1, sm: 'auto' },
-                    py: 1
-                  }}
-                  size="small"
-                >
-                  {refreshing ? '업데이트 중...' : '가격 업데이트'}
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  color="inherit"
-                  onClick={clearAllGames}
-                  startIcon={<DeleteIcon />}
-                  size="small"
-                  sx={{ 
-                    flex: { xs: 1, sm: 'auto' },
-                    py: 1
-                  }}
-                >
-                  모두 삭제
-                </Button>
-              </Box>
-            )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button 
+                variant="contained" 
+                color="secondary" 
+                startIcon={<AutorenewIcon />}
+                onClick={handleMigrateData}
+                disabled={migrateLoading}
+                sx={{ 
+                  color: 'white',
+                  '&.Mui-disabled': {
+                    color: 'rgba(255, 255, 255, 0.7)',
+                  }
+                }}
+              >
+                {migrateLoading ? '처리 중...' : '매일 자동 업데이트'}
+              </Button>
+              <IconButton 
+                color="inherit" 
+                onClick={refreshAllGames} 
+                disabled={refreshing || games.length === 0}
+                title="가격 업데이트"
+              >
+                {refreshing ? <CircularProgress size={24} color="inherit" /> : <RefreshIcon />}
+              </IconButton>
+              <IconButton 
+                color="inherit" 
+                onClick={() => {
+                  if (window.confirm('모든 게임을 삭제하시겠습니까?')) {
+                    setGames([]);
+                    localStorage.removeItem('monitoredGames');
+                  }
+                }}
+                disabled={games.length === 0}
+                title="모두 삭제"
+              >
+                <DeleteIcon />
+              </IconButton>
+            </Box>
           </Toolbar>
         </AppBar>
 
@@ -971,6 +1004,23 @@ export default function Home() {
             </>
           )}
         </Dialog>
+
+        {/* 알림 스낵바 */}
+        <Snackbar
+          open={snackbarOpen}
+          autoHideDuration={6000}
+          onClose={() => setSnackbarOpen(false)}
+          message={snackbarMessage}
+          action={
+            <IconButton
+              size="small"
+              color="inherit"
+              onClick={() => setSnackbarOpen(false)}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          }
+        />
       </Container>
     </ThemeProvider>
   );
