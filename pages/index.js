@@ -678,7 +678,7 @@ export default function Home() {
                   }}
                   size="small"
                 >
-                  {migrateLoading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon fontSize="small" />}
+                  {migrateLoading ? <CircularProgress size={20} color="inherit" sx={{ color: '#fff', opacity: 1 }} /> : <CloudUploadIcon fontSize="small" />}
                 </IconButton>
               </Box>
               
