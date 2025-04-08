@@ -626,34 +626,56 @@ export default function Home() {
         </Head>
 
         <AppBar position="static" sx={{ backgroundColor: '#E60012', marginBottom: { xs: 2, md: 4 } }}>
-          <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 1, sm: 2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <StorefrontIcon sx={{ mr: 1 }} />
-              <Typography variant="h6" component="div">
+              <Typography variant="h6" component="div" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
                 닌텐도 게임 가격 모니터
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button 
-                variant="contained" 
-                color="secondary" 
-                startIcon={<AutorenewIcon />}
-                onClick={handleMigrateData}
-                disabled={migrateLoading}
-                sx={{ 
-                  color: 'white',
-                  '&.Mui-disabled': {
-                    color: 'rgba(255, 255, 255, 0.7)',
-                  }
-                }}
-              >
-                {migrateLoading ? '처리 중...' : '매일 자동 업데이트'}
-              </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+              {/* 데스크톱에서는 텍스트 버튼, 모바일에서는 아이콘 버튼으로 표시 */}
+              <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                <Button 
+                  variant="contained" 
+                  color="secondary" 
+                  startIcon={<AutorenewIcon />}
+                  onClick={handleMigrateData}
+                  disabled={migrateLoading}
+                  sx={{ 
+                    color: 'white',
+                    '&.Mui-disabled': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                    }
+                  }}
+                >
+                  {migrateLoading ? '처리 중...' : '매일 자동 업데이트'}
+                </Button>
+              </Box>
+              
+              {/* 모바일에서는 아이콘만 표시 */}
+              <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+                <IconButton
+                  color="secondary"
+                  onClick={handleMigrateData}
+                  disabled={migrateLoading}
+                  title="매일 자동 업데이트"
+                  sx={{ 
+                    bgcolor: 'secondary.main',
+                    '&:hover': { bgcolor: 'secondary.dark' },
+                    '&.Mui-disabled': { bgcolor: 'rgba(31, 31, 31, 0.7)' }
+                  }}
+                >
+                  {migrateLoading ? <CircularProgress size={24} color="inherit" /> : <AutorenewIcon />}
+                </IconButton>
+              </Box>
+              
               <IconButton 
                 color="inherit" 
                 onClick={refreshAllGames} 
                 disabled={refreshing || games.length === 0}
                 title="가격 업데이트"
+                size="medium"
               >
                 {refreshing ? <CircularProgress size={24} color="inherit" /> : <RefreshIcon />}
               </IconButton>
@@ -667,6 +689,7 @@ export default function Home() {
                 }}
                 disabled={games.length === 0}
                 title="모두 삭제"
+                size="medium"
               >
                 <DeleteIcon />
               </IconButton>
