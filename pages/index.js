@@ -54,7 +54,8 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import StorefrontIcon from '@mui/icons-material/Storefront';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
+import CloudIcon from '@mui/icons-material/Cloud';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
 
 // Chart.js 컴포넌트 등록
 ChartJS.register(
@@ -639,34 +640,42 @@ export default function Home() {
                 <Button 
                   variant="contained" 
                   color="secondary" 
-                  startIcon={<AutorenewIcon />}
+                  startIcon={<CloudIcon />}
                   onClick={handleMigrateData}
                   disabled={migrateLoading}
                   sx={{ 
                     color: 'white',
+                    bgcolor: '#222',
+                    '&:hover': { bgcolor: '#444' },
                     '&.Mui-disabled': {
                       color: 'rgba(255, 255, 255, 0.7)',
-                    }
+                    },
+                    fontWeight: 'bold',
+                    px: 2
                   }}
                 >
-                  {migrateLoading ? '처리 중...' : '매일 자동 업데이트'}
+                  {migrateLoading ? '처리 중...' : '클라우드 저장'}
                 </Button>
               </Box>
               
               {/* 모바일에서는 아이콘만 표시 */}
               <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
                 <IconButton
-                  color="secondary"
+                  color="inherit"
                   onClick={handleMigrateData}
                   disabled={migrateLoading}
                   title="매일 자동 업데이트"
                   sx={{ 
-                    bgcolor: 'secondary.main',
-                    '&:hover': { bgcolor: 'secondary.dark' },
-                    '&.Mui-disabled': { bgcolor: 'rgba(31, 31, 31, 0.7)' }
+                    bgcolor: '#222',
+                    color: 'white',
+                    '&:hover': { bgcolor: '#444' },
+                    '&.Mui-disabled': { bgcolor: 'rgba(31, 31, 31, 0.7)' },
+                    p: 1.2,
+                    borderRadius: '50%',
+                    boxShadow: 2
                   }}
                 >
-                  {migrateLoading ? <CircularProgress size={24} color="inherit" /> : <AutorenewIcon />}
+                  {migrateLoading ? <CircularProgress size={28} color="inherit" /> : <CloudIcon fontSize="large" />}
                 </IconButton>
               </Box>
               
