@@ -54,6 +54,7 @@ import TimelineIcon from '@mui/icons-material/Timeline';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloudIcon from '@mui/icons-material/Cloud';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
 
@@ -640,7 +641,7 @@ export default function Home() {
                 <Button 
                   variant="contained" 
                   color="secondary" 
-                  startIcon={<CloudIcon />}
+                  startIcon={<CloudUploadIcon />}
                   onClick={handleMigrateData}
                   disabled={migrateLoading}
                   sx={{ 
@@ -653,8 +654,9 @@ export default function Home() {
                     fontWeight: 'bold',
                     px: 2
                   }}
+                  size="small"
                 >
-                  {migrateLoading ? '처리 중...' : '클라우드 저장'}
+                  {migrateLoading ? '처리 중...' : '매일 가격 업데이트'}
                 </Button>
               </Box>
               
@@ -664,18 +666,19 @@ export default function Home() {
                   color="inherit"
                   onClick={handleMigrateData}
                   disabled={migrateLoading}
-                  title="매일 자동 업데이트"
+                  title="매일 가격 업데이트"
                   sx={{ 
                     bgcolor: '#222',
                     color: 'white',
                     '&:hover': { bgcolor: '#444' },
                     '&.Mui-disabled': { bgcolor: 'rgba(31, 31, 31, 0.7)' },
-                    p: 1.2,
+                    p: 0.8,
                     borderRadius: '50%',
-                    boxShadow: 2
+                    boxShadow: 1
                   }}
+                  size="small"
                 >
-                  {migrateLoading ? <CircularProgress size={28} color="inherit" /> : <CloudIcon fontSize="large" />}
+                  {migrateLoading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon fontSize="small" />}
                 </IconButton>
               </Box>
               
