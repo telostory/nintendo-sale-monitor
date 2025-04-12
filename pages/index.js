@@ -709,10 +709,17 @@ export default function Home() {
           </Toolbar>
         </AppBar>
 
-        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: { xs: 2, sm: 1 }, width: '100%' }}>
+        <Paper elevation={2} sx={{ 
+          p: { xs: 2, sm: 3 }, 
+          mb: 4, 
+          borderRadius: { xs: 2, sm: 1 }, 
+          width: '100%',
+          maxWidth: { xs: '100%', md: '100%' },
+          backgroundColor: '#ffffff'
+        }}>
           <form onSubmit={fetchGameInfo}>
             <Grid container spacing={2} alignItems="center" direction="column" sx={{ width: '100%' }}>
-              <Grid item xs={12} sx={{ width: '100%', maxWidth: { xs: '100%', sm: '500px', md: '600px' }, mx: 'auto' }}>
+              <Grid item xs={12} sx={{ width: '100%', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, mx: 'auto' }}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -737,7 +744,7 @@ export default function Home() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sx={{ width: '100%', maxWidth: { xs: '100%', sm: '500px', md: '600px' }, mx: 'auto' }}>
+              <Grid item xs={12} sx={{ width: '100%', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, mx: 'auto' }}>
                 <Button
                   type="submit"
                   variant="contained"
@@ -756,7 +763,7 @@ export default function Home() {
               </Grid>
             </Grid>
             {error && (
-              <Alert severity="error" sx={{ mt: 2, maxWidth: { xs: '100%', sm: '500px', md: '600px' }, mx: 'auto' }}>
+              <Alert severity="error" sx={{ mt: 2, maxWidth: { xs: '100%', sm: '100%', md: '100%' }, mx: 'auto' }}>
                 {error}
               </Alert>
             )}
@@ -824,11 +831,19 @@ export default function Home() {
                   >
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
                       <Grid container alignItems="center" spacing={2} sx={{ width: '100%' }}>
-                        <Grid item xs={12} sm sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                        <Grid item xs={12} sm={8} md={9} sx={{ width: { xs: '100%', sm: 'auto' } }}>
                           <Typography 
                             variant="h6" 
                             gutterBottom
-                            sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, mb: 0.5 }}
+                            sx={{ 
+                              fontSize: { xs: '1rem', sm: '1.25rem' }, 
+                              mb: 0.5,
+                              width: '100%',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                            title={game.title || '제목 없음'}
                           >
                             {game.title || '제목 없음'}
                           </Typography>
@@ -878,39 +893,57 @@ export default function Home() {
                                 icon={<TimelineIcon />} 
                                 label={`${game.priceHistory.length}개의 가격 기록`}
                                 color="primary"
-                                onClick={() => handleGameSelect(game)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleGameSelect(game);
+                                }}
                                 clickable
                                 sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                               />
                             )}
                           </Box>
                         </Grid>
-                        <Grid item xs="auto" sm="auto" sx={{ alignSelf: 'center' }}>
+                        <Grid item xs={12} sm={4} md={3} sx={{ 
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          alignSelf: 'center',
+                          mt: { xs: 2, sm: 0 },
+                          width: { xs: '100%', sm: 'auto' }
+                        }}>
                           <Box sx={{ 
                             display: 'flex', 
-                            gap: 1
+                            gap: 1,
+                            justifyContent: { xs: 'center', sm: 'flex-end' }
                           }}>
                             <IconButton 
                               color="primary"
-                              onClick={() => handleGameSelect(game)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleGameSelect(game);
+                              }}
                               size="small"
                               title="가격 추이 보기"
                             >
                               <TimelineIcon />
                             </IconButton>
                             <IconButton 
+                              component="a"
                               href={game.url} 
                               target="_blank" 
                               rel="noopener noreferrer" 
                               color="primary"
                               size="small"
                               title="스토어에서 보기"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <LaunchIcon />
                             </IconButton>
                             <IconButton 
                               color="primary"
-                              onClick={() => refreshGame(game.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                refreshGame(game.id);
+                              }}
                               size="small"
                               disabled={refreshing}
                               title="가격 갱신"
@@ -919,7 +952,10 @@ export default function Home() {
                             </IconButton>
                             <IconButton 
                               color="error"
-                              onClick={() => removeGame(game.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeGame(game.id);
+                              }}
                               size="small"
                               title="삭제"
                             >
