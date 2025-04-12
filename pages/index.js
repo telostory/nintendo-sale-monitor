@@ -769,30 +769,7 @@ export default function Home() {
                     </>
                   ) : (
                     <>
-                      {/* 로그인하지 않은 경우: 로그인 버튼 표시 */}
-                      <IconButton 
-                        color="inherit" 
-                        onClick={() => signIn()}
-                        title="로그인"
-                        size="small"
-                        sx={{ display: { xs: 'flex', sm: 'none' } }}
-                      >
-                        <LoginIcon />
-                      </IconButton>
-                      <Button 
-                        variant="outlined" 
-                        color="inherit" 
-                        startIcon={<LoginIcon />}
-                        onClick={() => signIn()}
-                        size="small"
-                        sx={{ 
-                          display: { xs: 'none', sm: 'flex' },
-                          borderColor: 'rgba(255,255,255,0.5)',
-                          '&:hover': { borderColor: 'white' }
-                        }}
-                      >
-                        로그인
-                      </Button>
+                      {/* 로그인하지 않은 경우: 로그인 버튼은 제거 (로그인하여 동기화 버튼만 사용) */}
                     </>
                   )}
                 </>
