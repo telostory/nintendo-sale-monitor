@@ -14,13 +14,16 @@ const priceHistorySchema = new mongoose.Schema({
 }, { _id: false });
 
 const gameSchema = new mongoose.Schema({
-  url: { type: String, required: true, unique: true },  // 게임 URL (고유값)
-  title: { type: String, required: true },              // 게임 제목
-  price: { type: String, required: true },              // 현재 가격 (포맷된 문자열)
-  priceHistory: [priceHistorySchema],                   // 가격 변동 내역
-  lastUpdated: { type: Date, default: Date.now },       // 마지막 업데이트 시간
-  userId: { type: String, required: false }             // 사용자 ID (향후 사용자별 관리 구현 시)
+  url: { type: String, required: true },              // 게임 URL
+  title: { type: String, required: true },            // 게임 제목
+  price: { type: String, required: true },            // 현재 가격 (포맷된 문자열)
+  priceHistory: [priceHistorySchema],                 // 가격 변동 내역
+  lastUpdated: { type: Date, default: Date.now },     // 마지막 업데이트 시간
+  userId: { type: String, required: true }            // 사용자 ID (로그인한 사용자 구분용)
 }, { timestamps: true });
+
+// 사용자별 URL 조합으로 유니크 인덱스 생성 (같은 사용자가 같은 게임을 중복 등록 방지)
+gameSchema.index({ url: 1, userId: 1 }, { unique: true });
 
 // 모델 생성 (이미 존재하는 경우 재사용)
 export default mongoose.models.Game || mongoose.model('Game', gameSchema);

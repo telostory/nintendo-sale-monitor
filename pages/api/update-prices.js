@@ -4,6 +4,7 @@ import https from 'https';
 import mongoose from 'mongoose';
 import Game from '../../models/Game';
 import clientPromise from '../../lib/mongodb';
+import dbConnect from '../../lib/mongoose';
 
 // MongoDB 연결 초기화
 const connectDB = async () => {
@@ -236,27 +237,146 @@ async function updateGamePrices() {
 }
 
 export default async function handler(req, res) {
+  // API 키 검증 (보안을 위해)
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== process.env.CRON_API_KEY) {
+    return res.status(401).json({ success: false, message: '인증되지 않은 요청입니다.' });
+  }
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, message: '허용되지 않는 메소드입니다.' });
+  }
+
   try {
-    await connectDB();
+    await dbConnect();
     
-    // GET 요청 또는 크론 작업에서만 허용
-    if (req.method === 'GET' || (req.method === 'POST' && req.headers['x-vercel-cron'])) {
-      const results = await updateGamePrices();
-      return res.status(200).json({
-        success: true,
-        message: '게임 가격 업데이트 완료',
-        ...results
+    // 모든 게임 목록 조회
+    const games = await Game.find({});
+    
+    if (games.length === 0) {
+      return res.status(200).json({ 
+        success: true, 
+        message: '업데이트할 게임이 없습니다.',
+        updated: 0,
+        total: 0
       });
     }
     
-    // 허용되지 않은 메소드
-    return res.status(405).json({ success: false, message: '허용되지 않는 메소드입니다.' });
+    // 현재 날짜를 한국 시간(KST)으로 계산 (YYYY-MM-DD 형식)
+    const currentDate = new Date();
+    const koreaTime = new Date(currentDate.getTime() + (9 * 60 * 60 * 1000));
+    const today = koreaTime.toISOString().split('T')[0];
+    
+    let updatedCount = 0;
+    let errorCount = 0;
+    const errors = [];
+    
+    // 각 게임의 가격 정보 가져오기
+    for (const game of games) {
+      try {
+        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/game-info`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: game.url }),
+        });
+
+        if (!response.ok) {
+          errorCount++;
+          errors.push({ url: game.url, error: `API 응답 오류: ${response.status}` });
+          continue;
+        }
+
+        const data = await response.json();
+        const newPrice = data.price || game.price;
+        const priceNumber = parseInt(newPrice.replace(/[^\d]/g, ''));
+        
+        // 가격 기록 배열 준비
+        const priceHistory = game.priceHistory || [];
+        
+        // 할인 정보 계산
+        let discountInfo = null;
+        
+        // 가격 기록이 있으면 이전 가격과 비교
+        if (priceHistory.length > 0) {
+          const lastRecord = [...priceHistory].sort((a, b) => 
+            new Date(b.date) - new Date(a.date)
+          )[0];
+          
+          const lastPrice = lastRecord.price;
+          
+          // 현재 가격이 이전 가격보다 낮을 경우 할인 정보 계산
+          if (priceNumber < lastPrice) {
+            const discountAmount = lastPrice - priceNumber;
+            const discountRate = Math.round((discountAmount / lastPrice) * 100);
+            
+            discountInfo = {
+              originalPrice: lastPrice,
+              discountAmount: discountAmount,
+              discountRate: discountRate,
+              formattedDiscount: `-₩${discountAmount.toLocaleString()}`
+            };
+          }
+        }
+        
+        // 오늘 날짜의 기록이 있는지 확인
+        const todayRecordIndex = priceHistory.findIndex(record => record.date === today);
+        
+        if (todayRecordIndex >= 0) {
+          // 오늘 날짜의 기록 업데이트
+          priceHistory[todayRecordIndex] = { 
+            date: today, 
+            price: priceNumber, 
+            priceFormatted: newPrice,
+            discountInfo: discountInfo
+          };
+        } else {
+          // 새 기록 추가
+          priceHistory.push({ 
+            date: today, 
+            price: priceNumber, 
+            priceFormatted: newPrice,
+            discountInfo: discountInfo
+          });
+        }
+        
+        // 날짜순으로 정렬
+        priceHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        // 게임 정보 업데이트
+        game.price = newPrice;
+        game.priceHistory = priceHistory;
+        game.lastUpdated = new Date();
+        game.discountInfo = discountInfo;
+        
+        await game.save();
+        updatedCount++;
+        
+        // 업데이트 간 잠시 대기 (서버 부하 방지)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (error) {
+        console.error(`Game update error (${game.url}):`, error);
+        errorCount++;
+        errors.push({ url: game.url, error: error.message });
+      }
+    }
+    
+    return res.status(200).json({
+      success: true,
+      message: '게임 가격 업데이트 완료',
+      updated: updatedCount,
+      errors: errorCount,
+      total: games.length,
+      errorDetails: errors.length > 0 ? errors : undefined
+    });
     
   } catch (error) {
-    console.error('API 핸들러 오류:', error);
+    console.error('Price update error:', error);
     return res.status(500).json({ 
       success: false, 
-      message: '서버 오류가 발생했습니다',
+      message: '가격 업데이트 중 오류가 발생했습니다',
       error: error.message 
     });
   }
