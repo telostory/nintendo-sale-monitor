@@ -83,6 +83,7 @@ const theme = createTheme({
     },
     background: {
       default: '#f5f5f5',
+      paper: '#ffffff', // 명시적으로 하얀색 배경 설정
     },
   },
   typography: {
@@ -96,6 +97,25 @@ const theme = createTheme({
       'sans-serif',
     ].join(','),
   },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#ffffff',
+        },
+        elevation2: {
+          boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
+        },
+      }
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#ffffff',
+        }
+      }
+    }
+  }
 });
 
 export default function Home() {
@@ -618,7 +638,14 @@ export default function Home() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2, md: 3 }, width: '100%' }}>
+      <Container 
+        maxWidth="lg" 
+        sx={{ 
+          pt: 2, 
+          pb: 6,
+          px: { xs: 1, sm: 2 }
+        }}
+      >
         <Head>
           <title>닌텐도 게임 가격 모니터</title>
           <meta name="description" content="닌텐도 스토어 게임 가격 모니터링 도구" />
@@ -627,7 +654,14 @@ export default function Home() {
           <link rel="icon" href="data:," />
         </Head>
 
-        <AppBar position="static" sx={{ backgroundColor: '#E60012', marginBottom: { xs: 2, md: 4 }, width: '100%' }}>
+        <AppBar 
+          position="static" 
+          sx={{ 
+            backgroundColor: '#E60012', 
+            mb: { xs: 3, sm: 4 },
+            borderRadius: { xs: 2, sm: 1 }
+          }}
+        >
           <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 1, sm: 2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <StorefrontIcon sx={{ mr: 1 }} />
@@ -709,20 +743,20 @@ export default function Home() {
           </Toolbar>
         </AppBar>
 
-        <Paper elevation={2} sx={{ 
-          p: { xs: 2, sm: 3 }, 
-          mb: 4, 
-          borderRadius: { xs: 2, sm: 1 }, 
-          width: '100%',
-          bgcolor: 'background.paper',
-          boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
-        }}>
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: { xs: 2, sm: 3 }, 
+            mb: 4, 
+            borderRadius: { xs: 2, sm: 1 }
+          }}
+        >
           <Typography variant="h5" component="h2" sx={{ mb: 2, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
             게임 URL 입력
           </Typography>
           <form onSubmit={fetchGameInfo}>
-            <Grid container spacing={2} sx={{ width: '100%' }}>
-              <Grid item xs={12} sx={{ width: '100%' }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -733,7 +767,6 @@ export default function Home() {
                   required
                   size="medium"
                   sx={{ 
-                    width: '100%',
                     '& .MuiOutlinedInput-root': {
                       fontSize: { xs: '0.85rem', sm: '0.95rem' }
                     },
@@ -747,7 +780,7 @@ export default function Home() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sx={{ width: '100%' }}>
+              <Grid item xs={12}>
                 <Button
                   type="submit"
                   variant="contained"
@@ -800,15 +833,14 @@ export default function Home() {
           </Box>
           
           {games.length === 0 ? (
-            <Paper elevation={2} sx={{ 
-              p: { xs: 2, sm: 3 }, 
-              textAlign: 'center', 
-              borderRadius: { xs: 2, sm: 1 }, 
-              width: '100%', 
-              mx: 'auto',
-              bgcolor: 'background.paper',
-              boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
-            }}>
+            <Paper 
+              elevation={2} 
+              sx={{ 
+                p: { xs: 2, sm: 3 }, 
+                textAlign: 'center', 
+                borderRadius: { xs: 2, sm: 1 }
+              }}
+            >
               <Typography color="text.secondary" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                 아직 모니터링 중인 게임이 없습니다.
               </Typography>
@@ -819,26 +851,19 @@ export default function Home() {
               spacing={2} 
               columns={12} 
               direction="column"
-              sx={{ width: '100%', mx: 'auto' }}
             >
               {games.map((game) => (
                 <Grid 
                   item 
                   xs={12} 
-                  sm={12} 
-                  md={12} 
-                  lg={12} 
                   key={game.id}
-                  sx={{ width: '100%' }}
                 >
                   <Card 
                     elevation={2} 
                     sx={{ 
-                      width: '100%',
                       '&:hover': { boxShadow: 6 },
                       transition: 'box-shadow 0.3s',
-                      borderRadius: { xs: 2, sm: 1 },
-                      boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
+                      borderRadius: { xs: 2, sm: 1 }
                     }}
                   >
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
