@@ -643,13 +643,33 @@ export default function Home() {
         }
         
         if (!serverResponse.ok) {
-          // 중복 키 오류 처리
+          // 오류 유형에 따른 처리
           if (serverData.error === 'duplicate_key') {
-            console.log('중복된 게임 - 이미 등록된 게임으로 간주');
-            setError('이미 등록된 게임입니다. 새로고침 후 확인하세요.');
+            console.log('MongoDB 중복 키 오류:', serverData);
+            
+            setError('데이터베이스 중복 오류가 발생했습니다. 관리자에게 문의하세요.');
+            setSnackbarMessage('데이터베이스 중복 오류: 새로고침 후 다시 시도해주세요.');
+            setSnackbarOpen(true);
             
             // DB 동기화를 위해 게임 목록 다시 불러오기
-            await fetchUserGames();
+            await fetchUserGames(true);
+            setUrl('');
+            setAddGameLoading(false);
+            return;
+          }
+          
+          // 제품 ID 중복 오류 (URL은 다르지만 동일한 제품)
+          if (serverData.error === 'duplicate_product_id') {
+            console.log('제품 ID 중복:', serverData);
+            
+            // 이미 있는 게임 제목 표시
+            const existingGame = serverData.data;
+            const gameName = existingGame?.title || '게임';
+            
+            setError(`이미 등록된 게임입니다: "${gameName}"`);
+            setSnackbarMessage(`동일한 제품 ID를 가진 게임이 이미 등록되어 있습니다.`);
+            setSnackbarOpen(true);
+            
             setUrl('');
             setAddGameLoading(false);
             return;
@@ -685,7 +705,7 @@ export default function Home() {
         } else {
           // 서버 응답에 데이터가 없는 경우 - 게임 목록 전체 새로고침
           console.log('서버 응답에 데이터가 없어 게임 목록 새로고침');
-          await fetchUserGames();
+          await fetchUserGames(true);
         }
         
       } else {

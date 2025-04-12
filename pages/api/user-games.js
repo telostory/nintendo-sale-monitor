@@ -97,24 +97,63 @@ export default async function handler(req, res) {
         const cleanUrl = url.split('?')[0];
         console.log('정리된 URL:', cleanUrl);
         
+        // 제품 ID 추출 시도
+        let productId = '';
         try {
-          // 정확히 일치하는 URL로만 중복 게임 확인
-          console.log(`중복 게임 확인: userId=${userId}, cleanUrl=${cleanUrl}`);
-          const existingGame = await Game.findOne({ 
+          // URL에서 제품 ID 추출 (일반적인 형식: store.nintendo.co.kr/PRODUCT_ID)
+          const urlParts = cleanUrl.split('/');
+          productId = urlParts[urlParts.length - 1];
+          console.log('URL에서 추출한 제품 ID:', productId);
+        } catch (error) {
+          console.log('제품 ID 추출 실패:', error);
+        }
+        
+        try {
+          console.log(`사용자 ${userId}의 게임 중복 확인 시작`);
+          
+          // 1. 정확한 URL로 중복 확인 (정확히 일치하는 경우만)
+          const exactUrlMatch = await Game.findOne({ 
             userId, 
             url: cleanUrl 
           });
           
-          if (existingGame) {
-            console.log('이미 존재하는 게임 찾음:', existingGame._id, existingGame.title);
+          if (exactUrlMatch) {
+            console.log('정확한 URL 일치 발견:', exactUrlMatch._id, exactUrlMatch.title);
             return res.status(200).json({
               success: true,
-              message: '이미 등록된 게임입니다.',
-              data: existingGame
+              message: '이미 등록된 게임입니다 (정확한 URL 일치).',
+              data: exactUrlMatch
             });
           }
           
-          console.log('새 게임 등록 진행: 중복 게임 없음');
+          console.log('정확한 URL 일치 없음, 계속 진행');
+          
+          // 2. 제품 ID가 유효하고 동일한 제품 ID를 가진 게임이 이미 있는지 확인
+          if (productId && productId.length > 0) {
+            // DB에 있는 모든 게임의 URL 가져오기
+            const allUserGames = await Game.find({ userId });
+            console.log(`총 ${allUserGames.length}개 게임 로드됨`);
+            
+            // 각 게임의 URL에서 제품 ID 추출하여 비교
+            for (const game of allUserGames) {
+              const gameUrlParts = game.url.split('/');
+              const gameProductId = gameUrlParts[gameUrlParts.length - 1];
+              
+              console.log(`비교: 입력=${productId}, DB=${gameProductId}`);
+              
+              if (gameProductId === productId) {
+                console.log('제품 ID 일치 발견:', game._id, game.title);
+                return res.status(400).json({
+                  success: false,
+                  message: '이미 등록된 게임입니다 (제품 ID 일치).',
+                  error: 'duplicate_product_id',
+                  data: game
+                });
+              }
+            }
+            
+            console.log('제품 ID 일치 없음, 게임 추가 진행');
+          }
           
           // 새 게임 생성
           const newGame = new Game({
@@ -164,10 +203,49 @@ export default async function handler(req, res) {
               });
             }
             
+            // MongoDB 일관성 검사
+            console.log('중복 키 오류 발생했으나 게임을 찾을 수 없음. MongoDB 일관성 검사 수행');
+            
+            try {
+              // 일관성 오류 처리: 중복 키 오류가 났으나 실제 문서를 찾을 수 없는 경우
+              // 유니크 인덱스 재구축 시도
+              console.log('중복 오류 복구 시도');
+              
+              // 기존 동일 URL 문서가 있으면 강제 삭제 (이 부분은 위험할 수 있으므로 신중히 사용)
+              if (keyValue && keyValue.url) {
+                console.log('중복된 URL 강제 삭제 시도:', keyValue.url);
+                await Game.deleteOne({ 
+                  userId, 
+                  url: keyValue.url 
+                });
+                
+                // 삭제 후 다시 저장 시도
+                const recoveryGame = new Game({
+                  userId,
+                  url: cleanUrl,
+                  title,
+                  price,
+                  priceHistory: req.body.priceHistory || [],
+                  lastUpdated: new Date()
+                });
+                
+                const recoveredGame = await recoveryGame.save();
+                console.log('복구 저장 성공:', recoveredGame._id);
+                
+                return res.status(201).json({
+                  success: true,
+                  message: '게임이 성공적으로 추가되었습니다 (중복 오류 복구 후).',
+                  data: recoveredGame
+                });
+              }
+            } catch (recoveryError) {
+              console.error('중복 오류 복구 실패:', recoveryError);
+            }
+            
             // 명확한 오류 정보 반환
             return res.status(400).json({
               success: false,
-              message: '이미 등록된 게임입니다.',
+              message: '데이터베이스 중복 오류가 발생했습니다.',
               error: 'duplicate_key',
               details: {
                 keyPattern,
