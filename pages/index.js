@@ -748,7 +748,9 @@ export default function Home() {
           sx={{ 
             p: { xs: 2, sm: 3 }, 
             mb: 4, 
-            borderRadius: { xs: 2, sm: 1 }
+            borderRadius: { xs: 2, sm: 1 },
+            width: '100%',
+            bgcolor: 'background.paper'
           }}
         >
           <Typography variant="h5" component="h2" sx={{ mb: 2, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
