@@ -131,76 +131,82 @@ export default function Home() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [gameToDelete, setGameToDelete] = useState(null);
 
-  // 서버에서 사용자의 게임 목록 가져오기
-  const fetchUserGames = async () => {
+  // 서버에서 사용자의 게임 목록 가져오기 (자동 동기화 강화)
+  const fetchUserGames = async (showMessage = false) => {
     try {
       if (!session) {
-        console.log('로그인되지 않은 상태:', session);
+        console.log('로그인되지 않은 상태. 로컬 스토리지 사용');
         return;
       }
       
       if (!session.user) {
-        console.log('세션에 사용자 정보 없음:', session);
+        console.log('세션에 사용자 정보 없음. 로컬 스토리지 사용');
         return;
       }
       
-      console.log('fetchUserGames 시작 - 현재 세션:', session.user.email);
+      console.log('DB 동기화 시작...');
       setFetchLoading(true);
       
-      // API 요청
+      // API 요청 - 캐싱 방지 헤더 추가
       const response = await fetch('/api/user-games', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         },
         credentials: 'include',
       });
       
-      console.log('API 응답 상태코드:', response.status);
-      
+      // 세션 만료 시 자동 로그아웃
       if (response.status === 401) {
-        console.log('사용자 인증 실패 (401)');
-        const errorData = await response.json();
-        console.error('인증 오류:', errorData);
-        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
+        console.log('인증 세션 만료');
+        signOut({ redirect: false });
+        setError('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
         return;
       }
       
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API 오류:', errorData);
-        throw new Error(errorData.message || '서버에서 게임 목록을 가져오는데 실패했습니다.');
+        throw new Error('서버와 통신 중 오류가 발생했습니다.');
       }
       
-      // 응답 데이터 파싱
-      const responseClone = response.clone();
-      let data;
+      const data = await response.json();
       
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        const text = await responseClone.text();
-        console.error('JSON 파싱 오류:', parseError, text);
-        throw new Error('서버 응답을 처리할 수 없습니다.');
+      if (!data.success || !Array.isArray(data.data)) {
+        throw new Error('서버 응답 데이터 형식이 잘못되었습니다.');
       }
       
-      console.log('API 응답 데이터:', data);
+      // 데이터가 변경되었는지 확인 (ID 또는 URL 기반으로 비교)
+      const currentIds = games.map(g => g._id || g.id || g.url).filter(Boolean);
+      const newIds = data.data.map(g => g._id || g.id || g.url).filter(Boolean);
       
-      if (!data.success) {
-        throw new Error(data.message || '서버에서 게임 목록을 불러오는데 실패했습니다.');
+      // 배열 내용이 다르면 데이터 변경으로 판단
+      const hasChanges = JSON.stringify(currentIds.sort()) !== JSON.stringify(newIds.sort()) || 
+                       currentIds.length !== newIds.length;
+      
+      if (hasChanges) {
+        console.log('DB 상태 변경 감지, UI 업데이트');
+        setGames(data.data);
+        
+        // 변경 메시지 표시 (명시적으로 요청한 경우만)
+        if (showMessage) {
+          setSnackbarMessage(`게임 목록 업데이트됨: ${data.data.length}개 게임`);
+          setSnackbarOpen(true);
+        }
+      } else {
+        console.log('DB 상태 변경 없음, UI 유지');
+        
+        // 명시적으로 요청했으면 메시지 표시
+        if (showMessage) {
+          setSnackbarMessage('최신 상태입니다.');
+          setSnackbarOpen(true);
+        }
       }
       
-      if (!Array.isArray(data.data)) {
-        console.error('서버에서 받은 게임 데이터가 배열이 아닙니다:', data.data);
-        throw new Error('게임 목록 형식이 잘못되었습니다.');
+      // 디버깅: 특정 URL이 있는지 로그
+      if (data.data.some(game => game.url.includes('70010000027621'))) {
+        console.log('찾고 있는 게임 존재: 70010000027621');
       }
-      
-      // 받은 게임 목록을 상태에 설정
-      console.log(`가져온 게임 수: ${data.data.length}`);
-      
-      // 기존 게임 목록과 병합하지 않고, DB에서 가져온 데이터로 상태를 완전히 교체
-      setGames(data.data);
       
       // 마지막 업데이트 시간 설정
       if (data.data.length > 0) {
@@ -213,39 +219,35 @@ export default function Home() {
         }
       }
       
-      // 디버깅: 특정 URL이 있는지 로그
-      console.log('특정 URL이 있는지 확인:', 
-        data.data.some(game => game.url.includes('70010000027621'))
-      );
-      
-      // 결과 성공 메시지
-      if (data.data.length === 0) {
-        setSnackbarMessage('등록된 게임이 없습니다.');
-      } else {
-        setSnackbarMessage(`${data.data.length}개의 게임을 불러왔습니다.`);
-      }
-      setSnackbarOpen(true);
-      
     } catch (error) {
-      console.error('게임 목록 불러오기 오류:', error);
-      setError(error.message);
+      console.error('게임 목록 동기화 오류:', error);
+      
+      if (showMessage) {
+        setError(error.message);
+        setSnackbarMessage(`동기화 오류: ${error.message}`);
+        setSnackbarOpen(true);
+      }
     } finally {
       setFetchLoading(false);
     }
   };
 
-  // fetchUserGames가 세션 변경될 때마다 호출되도록 수정
+  // 게임 목록 자동 동기화 (더 자주 실행)
   useEffect(() => {
     if (status === "loading") {
-      console.log('세션 로딩 중...');
       return;
     }
     
-    console.log('세션 상태 변경:', status, session?.user?.email);
-    
     if (session && session.user) {
-      console.log('로그인 확인됨, DB에서 게임 목록 가져오기 시작');
+      // 초기 로드 시 데이터 가져오기
       fetchUserGames();
+      
+      // 30초마다 자동 동기화 (백그라운드)
+      const intervalId = setInterval(() => {
+        fetchUserGames(false);
+      }, 30 * 1000);
+      
+      return () => clearInterval(intervalId);
     } else {
       console.log('로그인되지 않음, 로컬 스토리지에서 게임 목록 로드');
       const savedGames = localStorage.getItem('monitoredGames');
@@ -253,7 +255,6 @@ export default function Home() {
         try {
           const parsedGames = JSON.parse(savedGames);
           setGames(parsedGames);
-          console.log('로컬 스토리지에서 게임 목록 로드 완료:', parsedGames.length);
           
           const lastRefreshTime = localStorage.getItem('lastRefreshed');
           if (lastRefreshTime) {
@@ -677,10 +678,10 @@ export default function Home() {
             }
           });
           
-          // 전체 목록도 새로고침 (혹시 놓친 게임이 있을 수 있으므로)
+          // 변경 후 전체 목록 자동 동기화 (즉시)
           setTimeout(() => {
-            fetchUserGames();
-          }, 1000);
+            fetchUserGames(true);
+          }, 500);
         } else {
           // 서버 응답에 데이터가 없는 경우 - 게임 목록 전체 새로고침
           console.log('서버 응답에 데이터가 없어 게임 목록 새로고침');
@@ -783,8 +784,8 @@ export default function Home() {
         setSnackbarMessage(`"${game.title}" 게임이 삭제되었습니다.`);
         setSnackbarOpen(true);
         
-        // DB 상태와 UI 동기화를 위해 전체 목록 새로고침
-        setTimeout(fetchUserGames, 500);
+        // DB 상태와 UI 동기화를 위해 전체 목록 즉시 새로고침
+        setTimeout(() => fetchUserGames(true), 500);
         
       } catch (error) {
         console.error('게임 삭제 오류:', error);
@@ -870,7 +871,7 @@ export default function Home() {
     }
   };
 
-  // 게임 카드를 렌더링하는 부분
+  // 게임 카드를 렌더링하는 부분 - 클릭 시 닌텐도 스토어로 이동 기능 추가
   const renderGameCard = (game) => {
     const lastPrice = game.priceHistory && game.priceHistory.length > 0 
       ? game.priceHistory[game.priceHistory.length - 1] 
@@ -884,20 +885,40 @@ export default function Home() {
     // 할인 정보 있는 경우 표시
     const hasDiscount = lastPrice && lastPrice.discountInfo;
     
+    // 게임 스토어 페이지로 이동 함수
+    const handleOpenGamePage = (e) => {
+      e.stopPropagation(); // 다른 클릭 이벤트 방지
+      window.open(game.url, '_blank', 'noopener,noreferrer');
+    };
+    
     return (
-      <Paper key={game._id || game.id} sx={{ 
-        mb: 2, 
-        p: 2,
-        position: 'relative'
-      }}>
+      <Paper 
+        key={game._id || game.id} 
+        sx={{ 
+          mb: 2, 
+          p: 2,
+          position: 'relative',
+          cursor: 'pointer',
+          '&:hover': {
+            boxShadow: '0px 3px 8px rgba(0, 0, 0, 0.1)',
+            transform: 'translateY(-2px)',
+            transition: 'all 0.2s ease'
+          }
+        }}
+        onClick={handleOpenGamePage}
+      >
         <IconButton 
           color="error" 
-          onClick={() => handleDeleteDialogOpen(game)}
+          onClick={(e) => {
+            e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
+            handleDeleteDialogOpen(game);
+          }}
           sx={{ 
             position: 'absolute', 
             top: 8, 
             right: 8,
-            p: 0.5
+            p: 0.5,
+            zIndex: 2 // 아이콘이 클릭 이벤트를 가로채도록
           }}
         >
           <DeleteIcon />
@@ -948,16 +969,33 @@ export default function Home() {
           <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
             추가일: {firstDate}
           </Typography>
-          <Button 
-            size="small" 
-            variant="outlined" 
-            color="primary"
-            onClick={() => handleShowChart(game)}
-            startIcon={<TimelineIcon />}
-            sx={{ ml: 'auto', fontSize: '0.7rem', py: 0.5 }}
-          >
-            가격 기록 보기
-          </Button>
+          
+          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              color="primary"
+              onClick={(e) => {
+                e.stopPropagation(); // 카드 클릭 이벤트 전파 방지
+                handleShowChart(game);
+              }}
+              startIcon={<TimelineIcon />}
+              sx={{ fontSize: '0.7rem', py: 0.5 }}
+            >
+              가격 기록
+            </Button>
+            
+            <Button 
+              size="small" 
+              variant="outlined" 
+              color="secondary"
+              onClick={handleOpenGamePage}
+              startIcon={<LaunchIcon />}
+              sx={{ fontSize: '0.7rem', py: 0.5 }}
+            >
+              스토어
+            </Button>
+          </Box>
         </Box>
       </Paper>
     );
@@ -1050,19 +1088,19 @@ export default function Home() {
 
   return (
     <ThemeProvider theme={theme}>
+      <Head>
+        <title>닌텐도 게임 가격 모니터</title>
+        <meta name="description" content="닌텐도 스토어 게임 가격을 모니터링하는 앱입니다." />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+      </Head>
+
       <Container maxWidth="md" sx={{ 
         py: { xs: 2, sm: 4 }, 
         px: { xs: 2, sm: 3 },
         overflow: 'hidden'  // 컨테이너 넘치는 요소 방지
       }}>
-        <Head>
-          <title>닌텐도 게임 가격 모니터</title>
-          <meta name="description" content="닌텐도 스토어 게임 가격을 모니터링하는 앱입니다." />
-          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-          <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-          <link rel="apple-touch-icon" href="/favicon.svg" />
-        </Head>
-
         <AppBar 
           position="static" 
           sx={{ 
@@ -1106,31 +1144,39 @@ export default function Home() {
               {session ? (
                 // 로그인 상태
                 <>
-                  {/* 모바일 상태 버튼 */}
+                  {/* 새로고침 버튼으로 변경 */}
                   <Box sx={{ display: { xs: 'flex', sm: 'none' } }}>
                     <IconButton
                       size="small"
-                      onClick={forceSyncDatabase}
+                      onClick={() => fetchUserGames(true)}
+                      disabled={fetchLoading}
                       sx={{ color: 'white', p: 0.8 }}
-                      title="DB 동기화"
+                      title="새로고침"
                     >
-                      <SyncIcon fontSize="small" />
+                      {fetchLoading ? 
+                        <CircularProgress color="inherit" size={20} /> : 
+                        <RefreshIcon fontSize="small" />
+                      }
                     </IconButton>
                   </Box>
                   
-                  {/* 데스크톱 상태 버튼 */}
+                  {/* 데스크톱 새로고침 버튼 */}
                   <Button
                     variant="outlined"
                     color="inherit"
                     size="small"
-                    onClick={forceSyncDatabase}
-                    startIcon={<SyncIcon />}
+                    onClick={() => fetchUserGames(true)}
+                    disabled={fetchLoading}
+                    startIcon={fetchLoading ? 
+                      <CircularProgress color="inherit" size={20} /> : 
+                      <RefreshIcon />
+                    }
                     sx={{ 
                       display: { xs: 'none', sm: 'flex' }, 
                       borderColor: 'rgba(255,255,255,0.5)'
                     }}
                   >
-                    DB 동기화
+                    새로고침
                   </Button>
                   
                   {/* 로그아웃 버튼 */}
