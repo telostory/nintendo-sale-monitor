@@ -906,7 +906,8 @@ export default function Home() {
               mx: { xs: 1, sm: 2 },
               width: { xs: 'calc(100% - 16px)', sm: '90%', md: '80%', lg: '70%' },
               borderRadius: { xs: 1, sm: 1 },
-              maxHeight: { xs: 'calc(100% - 32px)', sm: 'auto' }
+              maxHeight: { xs: 'calc(100% - 32px)', sm: 'auto' },
+              overflow: 'hidden'
             }
           }}
         >
@@ -917,7 +918,7 @@ export default function Home() {
                 justifyContent: 'space-between', 
                 alignItems: 'center',
                 p: { xs: 1.5, sm: 2 },
-                width: '100%'
+                borderBottom: '1px solid rgba(0, 0, 0, 0.12)'
               }}>
                 <Typography 
                   variant="h6"
@@ -933,13 +934,17 @@ export default function Home() {
                 </IconButton>
               </DialogTitle>
               <DialogContent 
-                dividers
                 sx={{
                   p: { xs: 1.5, sm: 2 },
-                  width: '100%'
+                  overflowX: 'hidden'
                 }}
               >
-                <Box sx={{ height: { xs: 200, sm: 300 }, mb: { xs: 2, sm: 3 }, width: '100%' }}>
+                <Box sx={{ 
+                  height: { xs: 200, sm: 300 }, 
+                  mb: { xs: 2, sm: 3 }, 
+                  width: '100%',
+                  maxWidth: '100%'
+                }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart 
                       data={selectedGame.priceHistory.map(record => ({
@@ -948,7 +953,7 @@ export default function Home() {
                         isVirtual: record.isVirtual || false,
                         priceFormatted: record.priceFormatted
                       }))} 
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis 
@@ -963,6 +968,7 @@ export default function Home() {
                         tickFormatter={(value) => `₩${value.toLocaleString()}`}
                         stroke="#666"
                         domain={['dataMin - 5000', 'dataMax + 5000']}
+                        width={60}
                       />
                       <RechartsTooltip 
                         formatter={(value, name) => [`₩${value.toLocaleString()}`, '가격']}
@@ -1003,7 +1009,7 @@ export default function Home() {
                     </LineChart>
                   </ResponsiveContainer>
                 </Box>
-                <Divider sx={{ my: 2, width: '100%' }} />
+                <Divider sx={{ my: 2 }} />
                 <Typography 
                   variant="h6" 
                   gutterBottom
@@ -1013,20 +1019,20 @@ export default function Home() {
                 >
                   가격 기록
                 </Typography>
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    overflow: 'auto',
-                    maxHeight: { xs: 200, sm: 300 },
-                    width: '100%'
-                  }}
-                >
-                  <Box sx={{ minWidth: { xs: 280, sm: 400 } }}>
-                    <Table size="small">
+                <Box sx={{ width: '100%', overflow: 'hidden' }}>
+                  <Paper 
+                    variant="outlined" 
+                    sx={{ 
+                      overflow: 'auto',
+                      maxHeight: { xs: 200, sm: 300 },
+                      width: '100%'
+                    }}
+                  >
+                    <Table size="small" sx={{ tableLayout: 'fixed' }}>
                       <TableHead>
                         <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>날짜</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>가격</TableCell>
+                          <TableCell width="50%" sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>날짜</TableCell>
+                          <TableCell width="50%" sx={{ fontWeight: 'bold', fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>가격</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -1044,8 +1050,8 @@ export default function Home() {
                         }
                       </TableBody>
                     </Table>
-                  </Box>
-                </Paper>
+                  </Paper>
+                </Box>
               </DialogContent>
               <DialogActions sx={{ p: { xs: 1, sm: 1.5 } }}>
                 <Button 
