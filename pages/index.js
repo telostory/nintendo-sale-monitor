@@ -714,12 +714,11 @@ export default function Home() {
           mb: 4, 
           borderRadius: { xs: 2, sm: 1 }, 
           width: '100%',
-          maxWidth: { xs: '100%', md: '100%' },
-          backgroundColor: '#ffffff'
+          bgcolor: 'background.paper'
         }}>
           <form onSubmit={fetchGameInfo}>
-            <Grid container spacing={2} alignItems="center" direction="column" sx={{ width: '100%' }}>
-              <Grid item xs={12} sx={{ width: '100%', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, mx: 'auto' }}>
+            <Grid container spacing={2} sx={{ width: '100%' }}>
+              <Grid item xs={12} sx={{ width: '100%' }}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -744,7 +743,7 @@ export default function Home() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sx={{ width: '100%', maxWidth: { xs: '100%', sm: '100%', md: '100%' }, mx: 'auto' }}>
+              <Grid item xs={12} sx={{ width: '100%' }}>
                 <Button
                   type="submit"
                   variant="contained"
@@ -763,7 +762,7 @@ export default function Home() {
               </Grid>
             </Grid>
             {error && (
-              <Alert severity="error" sx={{ mt: 2, maxWidth: { xs: '100%', sm: '100%', md: '100%' }, mx: 'auto' }}>
+              <Alert severity="error" sx={{ mt: 2 }}>
                 {error}
               </Alert>
             )}
@@ -830,8 +829,8 @@ export default function Home() {
                     }}
                   >
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-                      <Grid container alignItems="center" spacing={2} sx={{ width: '100%' }}>
-                        <Grid item xs={12} sm={8} md={9} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+                      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, width: '100%' }}>
+                        <Box sx={{ flexGrow: 1, width: { xs: '100%', sm: 'calc(100% - 140px)' } }}>
                           <Typography 
                             variant="h6" 
                             gutterBottom
@@ -861,7 +860,7 @@ export default function Home() {
                           
                           {/* 할인 정보 표시 */}
                           {game.discountInfo && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, width: '100%' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                               <Chip 
                                 size="small" 
                                 color="error"
@@ -879,7 +878,7 @@ export default function Home() {
                             </Box>
                           )}
                           
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1, width: '100%' }}>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                             <Chip 
                               size="small" 
                               label={`추가일: ${new Date(game.addedAt).toLocaleDateString()}`}
@@ -902,13 +901,17 @@ export default function Home() {
                               />
                             )}
                           </Box>
-                        </Grid>
-                        <Grid item xs={12} sm={4} md={3} sx={{ 
+                        </Box>
+                        
+                        <Box sx={{ 
                           display: 'flex',
+                          flexDirection: 'row',
                           justifyContent: 'flex-end',
-                          alignSelf: 'center',
-                          mt: { xs: 2, sm: 0 },
-                          width: { xs: '100%', sm: 'auto' }
+                          alignItems: 'center',
+                          width: { xs: '100%', sm: '140px' },
+                          minWidth: { sm: '140px' },
+                          flexShrink: 0,
+                          mt: { xs: 2, sm: 0 }
                         }}>
                           <Box sx={{ 
                             display: 'flex', 
@@ -962,8 +965,8 @@ export default function Home() {
                               <DeleteIcon />
                             </IconButton>
                           </Box>
-                        </Grid>
-                      </Grid>
+                        </Box>
+                      </Box>
                     </CardContent>
                   </Card>
                 </Grid>
