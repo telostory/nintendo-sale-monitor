@@ -618,7 +618,7 @@ export default function Home() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 2, sm: 3 } }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2, md: 3 }, width: '100%' }}>
         <Head>
           <title>닌텐도 게임 가격 모니터</title>
           <meta name="description" content="닌텐도 스토어 게임 가격 모니터링 도구" />
@@ -627,7 +627,7 @@ export default function Home() {
           <link rel="icon" href="data:," />
         </Head>
 
-        <AppBar position="static" sx={{ backgroundColor: '#E60012', marginBottom: { xs: 2, md: 4 } }}>
+        <AppBar position="static" sx={{ backgroundColor: '#E60012', marginBottom: { xs: 2, md: 4 }, width: '100%' }}>
           <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 1, sm: 2 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <StorefrontIcon sx={{ mr: 1 }} />
@@ -709,10 +709,10 @@ export default function Home() {
           </Toolbar>
         </AppBar>
 
-        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: { xs: 2, sm: 1 } }}>
+        <Paper elevation={2} sx={{ p: { xs: 2, sm: 3 }, mb: 4, borderRadius: { xs: 2, sm: 1 }, width: '100%' }}>
           <form onSubmit={fetchGameInfo}>
-            <Grid container spacing={2} alignItems="center" direction="column">
-              <Grid item xs={12} sx={{ width: '100%', maxWidth: '400px' }}>
+            <Grid container spacing={2} alignItems="center" direction="column" sx={{ width: '100%' }}>
+              <Grid item xs={12} sx={{ width: '100%', maxWidth: { xs: '100%', sm: '500px', md: '600px' }, mx: 'auto' }}>
                 <TextField
                   fullWidth
                   variant="outlined"
@@ -723,7 +723,7 @@ export default function Home() {
                   required
                   size="medium"
                   sx={{ 
-                    minWidth: '100%',
+                    width: '100%',
                     '& .MuiOutlinedInput-root': {
                       fontSize: { xs: '0.85rem', sm: '0.95rem' }
                     },
@@ -737,7 +737,7 @@ export default function Home() {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sx={{ width: '100%', maxWidth: '400px' }}>
+              <Grid item xs={12} sx={{ width: '100%', maxWidth: { xs: '100%', sm: '500px', md: '600px' }, mx: 'auto' }}>
                 <Button
                   type="submit"
                   variant="contained"
@@ -756,14 +756,14 @@ export default function Home() {
               </Grid>
             </Grid>
             {error && (
-              <Alert severity="error" sx={{ mt: 2, maxWidth: '400px', mx: 'auto' }}>
+              <Alert severity="error" sx={{ mt: 2, maxWidth: { xs: '100%', sm: '500px', md: '600px' }, mx: 'auto' }}>
                 {error}
               </Alert>
             )}
           </form>
         </Paper>
 
-        <Box>
+        <Box sx={{ width: '100%' }}>
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -771,7 +771,8 @@ export default function Home() {
             flexDirection: { xs: 'column', sm: 'row' },
             mb: 2,
             gap: { xs: 0.5, sm: 0 },
-            maxWidth: '800px',
+            width: '100%',
+            maxWidth: { xs: '100%', sm: '100%', md: '100%', lg: '100%' },
             mx: 'auto'
           }}>
             <Typography variant="h5" component="h2" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
@@ -789,7 +790,7 @@ export default function Home() {
           </Box>
           
           {games.length === 0 ? (
-            <Paper elevation={1} sx={{ p: 4, textAlign: 'center', borderRadius: { xs: 2, sm: 1 }, maxWidth: '800px', mx: 'auto' }}>
+            <Paper elevation={1} sx={{ p: 4, textAlign: 'center', borderRadius: { xs: 2, sm: 1 }, width: '100%', mx: 'auto' }}>
               <Typography color="text.secondary" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                 아직 모니터링 중인 게임이 없습니다.
               </Typography>
@@ -800,7 +801,7 @@ export default function Home() {
               spacing={2} 
               columns={12} 
               direction="column"
-              sx={{ maxWidth: '800px', mx: 'auto' }}
+              sx={{ width: '100%', mx: 'auto' }}
             >
               {games.map((game) => (
                 <Grid 
@@ -822,8 +823,8 @@ export default function Home() {
                     }}
                   >
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
-                      <Grid container alignItems="center" spacing={2}>
-                        <Grid item xs={12} sm>
+                      <Grid container alignItems="center" spacing={2} sx={{ width: '100%' }}>
+                        <Grid item xs={12} sm sx={{ width: { xs: '100%', sm: 'auto' } }}>
                           <Typography 
                             variant="h6" 
                             gutterBottom
@@ -845,7 +846,7 @@ export default function Home() {
                           
                           {/* 할인 정보 표시 */}
                           {game.discountInfo && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, width: '100%' }}>
                               <Chip 
                                 size="small" 
                                 color="error"
@@ -863,7 +864,7 @@ export default function Home() {
                             </Box>
                           )}
                           
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1, width: '100%' }}>
                             <Chip 
                               size="small" 
                               label={`추가일: ${new Date(game.addedAt).toLocaleDateString()}`}
@@ -939,12 +940,12 @@ export default function Home() {
         <Dialog 
           open={chartDialogOpen} 
           onClose={handleCloseChart}
-          maxWidth="md"
+          maxWidth="lg"
           fullWidth
           sx={{
             '& .MuiDialog-paper': {
               mx: { xs: 1, sm: 2 },
-              width: { xs: 'calc(100% - 16px)', sm: 'auto' },
+              width: { xs: 'calc(100% - 16px)', sm: '90%', md: '80%', lg: '70%' },
               borderRadius: { xs: 2, sm: 1 }
             }
           }}
@@ -955,7 +956,8 @@ export default function Home() {
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 alignItems: 'center',
-                p: { xs: 1.5, sm: 2 }
+                p: { xs: 1.5, sm: 2 },
+                width: '100%'
               }}>
                 <Typography 
                   variant="h6"
@@ -973,13 +975,14 @@ export default function Home() {
               <DialogContent 
                 dividers
                 sx={{
-                  p: { xs: 1.5, sm: 2 }
+                  p: { xs: 1.5, sm: 2 },
+                  width: '100%'
                 }}
               >
-                <Box sx={{ height: { xs: 200, sm: 300 }, mb: { xs: 2, sm: 3 } }}>
+                <Box sx={{ height: { xs: 200, sm: 300 }, mb: { xs: 2, sm: 3 }, width: '100%' }}>
                   <Line data={getChartData(selectedGame)} options={chartOptions} />
                 </Box>
-                <Divider sx={{ my: 2 }} />
+                <Divider sx={{ my: 2, width: '100%' }} />
                 <Typography 
                   variant="h6" 
                   gutterBottom
@@ -993,7 +996,8 @@ export default function Home() {
                   variant="outlined" 
                   sx={{ 
                     overflow: 'auto',
-                    maxHeight: { xs: 200, sm: 300 }
+                    maxHeight: { xs: 200, sm: 300 },
+                    width: '100%'
                   }}
                 >
                   <Box sx={{ minWidth: { xs: 280, sm: 400 } }}>
