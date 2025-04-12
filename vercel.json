@@ -1,4 +1,17 @@
 {
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "installCommand": "npm install --no-save"
+      }
+    }
+  ],
+  "github": {
+    "silent": true
+  },
   "crons": [
     {
       "path": "/api/update-prices",
