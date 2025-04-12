@@ -1,17 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
 import { 
   LineChart, 
   Line, 
@@ -67,17 +56,6 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloudIcon from '@mui/icons-material/Cloud';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
-
-// Chart.js 컴포넌트 등록
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 // 테마 설정
 const theme = createTheme({
@@ -536,105 +514,6 @@ export default function Home() {
     setChartDialogOpen(false);
   };
   
-  // 가격 그래프 데이터 생성
-  const getChartData = (game) => {
-    if (!game || !game.priceHistory || game.priceHistory.length < 1) {
-      return {
-        labels: [],
-        datasets: []
-      };
-    }
-    
-    // 정렬된 가격 히스토리를 사용
-    const sortedHistory = [...game.priceHistory].sort((a, b) => 
-      new Date(a.date) - new Date(b.date)
-    );
-    
-    // 시각적 표현을 위해 필요한 경우 가상의 이전 데이터 포인트 추가
-    let chartData = [...sortedHistory];
-    
-    // 데이터 포인트가 하나뿐이면, 가상의 이전 데이터 포인트 추가
-    if (chartData.length === 1) {
-      const currentPoint = chartData[0];
-      const currentDate = new Date(currentPoint.date);
-      
-      // 3일 전 날짜 계산
-      const previousDate = new Date(currentDate);
-      previousDate.setDate(previousDate.getDate() - 3);
-      
-      // 같은 가격의 가상 데이터 포인트 추가
-      const virtualPoint = {
-        date: previousDate.toISOString().split('T')[0],
-        price: currentPoint.price,
-        priceFormatted: currentPoint.priceFormatted,
-        isVirtual: true  // 가상 데이터 표시
-      };
-      
-      chartData.unshift(virtualPoint);
-    }
-    
-    return {
-      labels: chartData.map(record => {
-        // YYYY-MM-DD 형식을 MM-DD 형식으로 변환
-        const date = new Date(record.date);
-        return `${date.getMonth() + 1}/${date.getDate()}`;
-      }),
-      datasets: [
-        {
-          label: '가격 (원)',
-          data: chartData.map(record => record.price),
-          borderColor: theme.palette.primary.main,
-          backgroundColor: 'rgba(230, 0, 18, 0.1)',
-          tension: 0.1,
-          pointBackgroundColor: chartData.map(record => 
-            record.isVirtual ? 'rgba(200, 200, 200, 0.5)' : 'rgba(230, 0, 18, 0.5)'
-          ),
-          pointBorderColor: chartData.map(record => 
-            record.isVirtual ? 'rgba(200, 200, 200, 0.8)' : theme.palette.primary.main
-          ),
-          pointRadius: chartData.map(record => record.isVirtual ? 3 : 5),
-        }
-      ]
-    };
-  };
-  
-  // 차트 옵션
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-      title: {
-        display: true,
-        text: '가격 변동 추이',
-        color: theme.palette.text.primary,
-        font: {
-          size: 16,
-          weight: 'bold',
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: function(context) {
-            const price = context.raw;
-            return `₩${price.toLocaleString()}`;
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: false,
-        ticks: {
-          callback: function(value) {
-            return `₩${value.toLocaleString()}`;
-          }
-        }
-      }
-    }
-  };
-
   // 포맷된 마지막 업데이트 시간
   const formattedLastRefreshed = lastRefreshed 
     ? new Date(lastRefreshed).toLocaleString('ko-KR', {
