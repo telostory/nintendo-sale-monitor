@@ -119,6 +119,8 @@ export default function Home() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [migrateLoading, setMigrateLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [gameToDelete, setGameToDelete] = useState(null);
 
   // 페이지 로드 시 로컬 스토리지에서 저장된 게임 목록 불러오기
   useEffect(() => {
@@ -473,6 +475,10 @@ export default function Home() {
       setGames([...games, newGame]);
       setUrl('');
       setDebug(JSON.stringify(data, null, 2));
+      
+      // 게임 추가 성공 메시지
+      setSnackbarMessage(`"${newGame.title}" 게임이 추가되었습니다.`);
+      setSnackbarOpen(true);
     } catch (error) {
       setError(error.message);
       console.error('오류 상세:', error.toString());
@@ -482,7 +488,23 @@ export default function Home() {
     }
   };
 
+  // 게임 삭제 다이얼로그 열기
+  const openDeleteDialog = (id) => {
+    const gameToDelete = games.find(game => game.id === id);
+    if (gameToDelete) {
+      setGameToDelete(gameToDelete);
+      setDeleteDialogOpen(true);
+    }
+  };
+
+  // 게임 삭제 다이얼로그 닫기
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setGameToDelete(null);
+  };
+
   const removeGame = (id) => {
+    const gameToRemove = games.find(game => game.id === id);
     const updatedGames = games.filter(game => game.id !== id);
     setGames(updatedGames);
     
@@ -496,6 +518,14 @@ export default function Home() {
     if (updatedGames.length === 0) {
       localStorage.removeItem('monitoredGames');
     }
+    
+    // 게임 삭제 완료 메시지
+    if (gameToRemove) {
+      setSnackbarMessage(`"${gameToRemove.title}" 게임이 삭제되었습니다.`);
+      setSnackbarOpen(true);
+    }
+    
+    closeDeleteDialog();
   };
   
   const clearAllGames = () => {
@@ -843,7 +873,7 @@ export default function Home() {
                               color="error"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                removeGame(game.id);
+                                openDeleteDialog(game.id);
                               }}
                               size="small"
                               title="삭제"
@@ -1040,7 +1070,7 @@ export default function Home() {
         {/* 알림 스낵바 */}
         <Snackbar
           open={snackbarOpen}
-          autoHideDuration={6000}
+          autoHideDuration={4000}
           onClose={() => setSnackbarOpen(false)}
           message={snackbarMessage}
           action={
@@ -1053,6 +1083,45 @@ export default function Home() {
             </IconButton>
           }
         />
+        
+        {/* 게임 삭제 확인 다이얼로그 */}
+        <Dialog 
+          open={deleteDialogOpen} 
+          onClose={closeDeleteDialog}
+          sx={{
+            '& .MuiDialog-paper': {
+              width: { xs: '90%', sm: 'auto' },
+              minWidth: { sm: '380px' },
+              p: 1
+            }
+          }}
+        >
+          <DialogTitle sx={{ pb: 1 }}>게임 삭제 확인</DialogTitle>
+          <DialogContent sx={{ pt: 0 }}>
+            <Typography>
+              {gameToDelete ? `"${gameToDelete.title}" 게임을 모니터링 목록에서 삭제하시겠습니까?` : '이 게임을 모니터링 목록에서 삭제하시겠습니까?'}
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ px: 2, pb: 2 }}>
+            <Button 
+              onClick={closeDeleteDialog} 
+              color="primary" 
+              variant="outlined"
+              size="small"
+            >
+              취소
+            </Button>
+            <Button 
+              onClick={() => gameToDelete && removeGame(gameToDelete.id)} 
+              color="error" 
+              variant="contained"
+              size="small"
+              sx={{ ml: 1 }}
+            >
+              삭제
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </ThemeProvider>
   );
