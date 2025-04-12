@@ -84,68 +84,116 @@ export default async function handler(req, res) {
       try {
         const { url, title, price, priceHistory } = req.body;
         
-        if (!url) {
+        if (!url || !title || !price) {
           return res.status(400).json({ 
             success: false, 
-            message: '게임 URL은 필수 항목입니다.' 
+            message: '게임 URL, 제목, 가격은 필수 항목입니다.' 
           });
         }
         
-        // 해당 사용자가 이미 같은 URL의 게임을 추가했는지 확인
-        const existingGame = await Game.findOne({ url, userId });
+        // URL 정리 (쿼리 파라미터 제거)
+        const cleanUrl = url.split('?')[0];
         
-        if (existingGame) {
-          // 게임이 이미 있으면 업데이트
-          existingGame.title = title || existingGame.title;
-          existingGame.price = price || existingGame.price;
+        // MongoDB 모델을 직접 사용하여 게임 추가
+        try {
+          // 기존 게임 찾기
+          const existingGame = await Game.findOne({ 
+            userId: userId, 
+            url: cleanUrl 
+          });
           
-          // 가격 기록이 있으면 업데이트
-          if (priceHistory && priceHistory.length > 0) {
-            // 기존 가격 기록의 날짜 목록 생성
-            const existingDates = existingGame.priceHistory.map(record => record.date);
+          if (existingGame) {
+            // 이미 있는 게임이면 업데이트
+            console.log('기존 게임 업데이트:', existingGame._id);
             
-            // 새로운 가격 기록 추가
-            for (const priceRecord of priceHistory) {
-              if (!existingDates.includes(priceRecord.date)) {
-                existingGame.priceHistory.push(priceRecord);
+            // 가격 이력이 있으면 추가
+            if (priceHistory && priceHistory.length > 0) {
+              // 기존 날짜 목록 확인
+              const existingDates = existingGame.priceHistory.map(record => record.date);
+              
+              // 새 가격 기록 중 중복되지 않은 것만 추가
+              for (const record of priceHistory) {
+                if (!existingDates.includes(record.date)) {
+                  existingGame.priceHistory.push(record);
+                }
               }
+              
+              // 날짜순 정렬
+              existingGame.priceHistory.sort((a, b) => 
+                new Date(a.date) - new Date(b.date)
+              );
             }
             
-            // 날짜순으로 정렬
-            existingGame.priceHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+            // 필드 업데이트
+            existingGame.title = title;
+            existingGame.price = price;
+            existingGame.lastUpdated = new Date();
+            
+            // 저장
+            await existingGame.save();
+            
+            return res.status(200).json({
+              success: true,
+              message: '게임 정보가 업데이트되었습니다.',
+              data: existingGame
+            });
+            
+          } else {
+            // 새 게임 추가
+            console.log('새 게임 추가:', cleanUrl);
+            
+            const newGame = new Game({
+              userId,
+              url: cleanUrl,
+              title,
+              price,
+              priceHistory: priceHistory || [],
+              lastUpdated: new Date()
+            });
+            
+            const savedGame = await newGame.save();
+            
+            return res.status(201).json({
+              success: true,
+              message: '새 게임이 추가되었습니다.',
+              data: savedGame
+            });
+          }
+        } catch (error) {
+          // MongoDB 중복 키 오류 처리
+          if (error.code === 11000) {
+            console.error('MongoDB 중복 키 오류:', error);
+            
+            // 다시 한번 이 URL의 게임이 있는지 확인
+            const existingGame = await Game.findOne({ 
+              userId: userId, 
+              url: cleanUrl 
+            });
+            
+            if (existingGame) {
+              return res.status(200).json({
+                success: true,
+                message: '이미 존재하는 게임입니다.',
+                data: existingGame
+              });
+            } else {
+              return res.status(400).json({
+                success: false,
+                message: '중복된 게임을 추가할 수 없습니다.',
+                error: error.message
+              });
+            }
           }
           
-          existingGame.lastUpdated = new Date();
-          await existingGame.save();
-          
-          return res.status(200).json({
-            success: true,
-            message: '게임 정보가 업데이트되었습니다.',
-            data: existingGame
-          });
-        } else {
-          // 새 게임 추가
-          const newGame = await Game.create({
-            url,
-            title,
-            price,
-            priceHistory: priceHistory || [],
-            userId,
-            lastUpdated: new Date()
-          });
-          
-          return res.status(201).json({
-            success: true,
-            message: '새 게임이 추가되었습니다.',
-            data: newGame
-          });
+          // 그 외 다른 오류
+          throw error;
         }
       } catch (error) {
         console.error('게임 추가 오류:', error);
         return res.status(500).json({ 
           success: false, 
-          message: '게임을 추가하는 중 오류가 발생했습니다.',
-          error: error.message
+          message: '게임을 추가하는 중 오류가 발생했습니다.', 
+          error: error.message 
         });
       }
       
