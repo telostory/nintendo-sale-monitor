@@ -42,7 +42,8 @@ import {
   TableRow,
   Switch,
   Snackbar,
-  FormControlLabel
+  FormControlLabel,
+  Avatar
 } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -60,6 +61,7 @@ import CloudDoneIcon from '@mui/icons-material/CloudDone';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import LoginIcon from '@mui/icons-material/Login';
+import SyncIcon from '@mui/icons-material/Sync';
 
 // 테마 설정
 const theme = createTheme({
@@ -131,115 +133,121 @@ export default function Home() {
 
   // 서버에서 사용자의 게임 목록 가져오기
   const fetchUserGames = async () => {
-    if (!session) {
-      console.log('로그인되지 않은 상태:', session);
-      return;
-    }
-    
-    if (!session.user) {
-      console.log('세션에 사용자 정보 없음:', session);
-      return;
-    }
-    
-    // userId가 어느 필드에 있는지 확인
-    const userId = session.user.id || session.user.sub;
-    
-    if (!userId) {
-      console.error('세션에 사용자 ID가 없습니다:', session.user);
-      setSnackbarMessage('로그인 정보가 올바르지 않습니다. 다시 로그인해주세요.');
-      setSnackbarOpen(true);
-      signOut({ redirect: false }); // 세션이 불완전한 경우 로그아웃 처리
-      return;
-    }
-    
-    console.log('사용자 게임 목록 요청 시작. 사용자 ID:', userId);
-    
     try {
+      if (!session) {
+        console.log('로그인되지 않은 상태:', session);
+        return;
+      }
+      
+      if (!session.user) {
+        console.log('세션에 사용자 정보 없음:', session);
+        return;
+      }
+      
+      console.log('fetchUserGames 시작 - 현재 세션:', session.user.email);
       setFetchLoading(true);
       
+      // API 요청
       const response = await fetch('/api/user-games', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store'
         },
-        credentials: 'include', // 쿠키 포함하여 요청
+        credentials: 'include',
       });
       
       console.log('API 응답 상태코드:', response.status);
       
       if (response.status === 401) {
         console.log('사용자 인증 실패 (401)');
-        
-        const responseClone = response.clone();
-        const errorText = await responseClone.text();
-        console.log('401 응답 내용:', errorText);
-        
-        // 인증 오류는 조용히 처리 (사용자가 새로 로그인한 경우 정상적인 상황)
-        setSnackbarMessage('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
-        setSnackbarOpen(true);
-        signOut({ redirect: false }); // 세션이 만료된 경우 로그아웃 처리
+        const errorData = await response.json();
+        console.error('인증 오류:', errorData);
+        setError('인증 세션이 만료되었습니다. 다시 로그인해주세요.');
         return;
       }
       
       if (!response.ok) {
-        console.log('API 오류 응답:', response.status);
-        
-        const responseClone = response.clone();
-        const errorText = await responseClone.text();
-        console.log('오류 응답 내용:', errorText);
-        
         const errorData = await response.json();
+        console.error('API 오류:', errorData);
         throw new Error(errorData.message || '서버에서 게임 목록을 가져오는데 실패했습니다.');
       }
       
-      const data = await response.json();
-      console.log('API 응답 데이터:', JSON.stringify(data, null, 2));
+      // 응답 데이터 파싱
+      const responseClone = response.clone();
+      let data;
       
-      if (data.success && data.data) {
-        // 게임 데이터가 있는 경우에만 상태 업데이트
-        if (Array.isArray(data.data)) {
-          setGames(data.data);
-          console.log('게임 목록 설정 완료:', data.data.length);
-          
-          // 서버에서 가져온 데이터의 마지막 업데이트 시간 설정
-          if (data.data.length > 0) {
-            const latestUpdate = Math.max(...data.data.map(game => 
-              game.lastUpdated ? new Date(game.lastUpdated).getTime() : 0
-            ));
-            
-            if (latestUpdate > 0) {
-              setLastRefreshed(new Date(latestUpdate));
-              console.log('마지막 업데이트 시간 설정:', new Date(latestUpdate));
-            }
-          }
-        } else {
-          console.error('서버에서 받은 게임 데이터가 배열이 아닙니다:', data.data);
-          setSnackbarMessage('게임 목록 형식이 잘못되었습니다. 관리자에게 문의하세요.');
-          setSnackbarOpen(true);
-        }
-      } else {
-        console.log('서버에서 받은 데이터가 유효하지 않습니다:', data);
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        const text = await responseClone.text();
+        console.error('JSON 파싱 오류:', parseError, text);
+        throw new Error('서버 응답을 처리할 수 없습니다.');
       }
+      
+      console.log('API 응답 데이터:', data);
+      
+      if (!data.success) {
+        throw new Error(data.message || '서버에서 게임 목록을 불러오는데 실패했습니다.');
+      }
+      
+      if (!Array.isArray(data.data)) {
+        console.error('서버에서 받은 게임 데이터가 배열이 아닙니다:', data.data);
+        throw new Error('게임 목록 형식이 잘못되었습니다.');
+      }
+      
+      // 받은 게임 목록을 상태에 설정
+      console.log(`가져온 게임 수: ${data.data.length}`);
+      
+      // 기존 게임 목록과 병합하지 않고, DB에서 가져온 데이터로 상태를 완전히 교체
+      setGames(data.data);
+      
+      // 마지막 업데이트 시간 설정
+      if (data.data.length > 0) {
+        const latestUpdate = Math.max(...data.data.map(game => 
+          game.lastUpdated ? new Date(game.lastUpdated).getTime() : 0
+        ));
+        
+        if (latestUpdate > 0) {
+          setLastRefreshed(new Date(latestUpdate));
+        }
+      }
+      
+      // 디버깅: 특정 URL이 있는지 로그
+      console.log('특정 URL이 있는지 확인:', 
+        data.data.some(game => game.url.includes('70010000027621'))
+      );
+      
+      // 결과 성공 메시지
+      if (data.data.length === 0) {
+        setSnackbarMessage('등록된 게임이 없습니다.');
+      } else {
+        setSnackbarMessage(`${data.data.length}개의 게임을 불러왔습니다.`);
+      }
+      setSnackbarOpen(true);
+      
     } catch (error) {
       console.error('게임 목록 불러오기 오류:', error);
-      setSnackbarMessage(error.message || '게임 목록을 불러오는데 문제가 발생했습니다.');
-      setSnackbarOpen(true);
+      setError(error.message);
     } finally {
       setFetchLoading(false);
     }
   };
 
-  // 로그인 상태에 따라 게임 목록 로드 방식을 달리함
+  // fetchUserGames가 세션 변경될 때마다 호출되도록 수정
   useEffect(() => {
-    if (status === "loading") return; // 인증 상태 로딩 중일 때는 아무것도 하지 않음
+    if (status === "loading") {
+      console.log('세션 로딩 중...');
+      return;
+    }
+    
+    console.log('세션 상태 변경:', status, session?.user?.email);
     
     if (session && session.user) {
-      // 로그인된 경우: 서버에서 게임 목록 로드
-      console.log('로그인 상태 감지, 서버에서 게임 목록 로드 시작');
+      console.log('로그인 확인됨, DB에서 게임 목록 가져오기 시작');
       fetchUserGames();
     } else {
-      // 로그인되지 않은 경우: 로컬 스토리지에서 게임 목록 로드
-      console.log('비로그인 상태, 로컬 스토리지에서 게임 목록 로드');
+      console.log('로그인되지 않음, 로컬 스토리지에서 게임 목록 로드');
       const savedGames = localStorage.getItem('monitoredGames');
       if (savedGames) {
         try {
@@ -247,17 +255,14 @@ export default function Home() {
           setGames(parsedGames);
           console.log('로컬 스토리지에서 게임 목록 로드 완료:', parsedGames.length);
           
-          // 마지막 새로고침 시간 가져오기
           const lastRefreshTime = localStorage.getItem('lastRefreshed');
           if (lastRefreshTime) {
             setLastRefreshed(new Date(lastRefreshTime));
           }
         } catch (error) {
-          console.error('저장된 게임 목록을 불러오는 중 오류 발생:', error);
-          localStorage.removeItem('monitoredGames'); // 손상된 데이터 제거
+          console.error('저장된 게임 목록 파싱 오류:', error);
+          localStorage.removeItem('monitoredGames');
         }
-      } else {
-        console.log('로컬 스토리지에 저장된 게임 목록 없음');
       }
     }
   }, [session, status]);
@@ -998,6 +1003,51 @@ export default function Home() {
     }
   };
 
+  // DB 일관성 복구 버튼 추가
+  const forceSyncDatabase = async () => {
+    if (!session || !session.user) {
+      setSnackbarMessage('로그인 후 사용할 수 있는 기능입니다.');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    try {
+      setFetchLoading(true);
+      
+      // DB에서 최신 데이터 다시 가져오기
+      const response = await fetch('/api/user-games', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('서버 연결 오류. 다시 시도해주세요.');
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success || !Array.isArray(data.data)) {
+        throw new Error('데이터 형식 오류. 관리자에게 문의하세요.');
+      }
+      
+      // 상태 업데이트
+      setGames(data.data);
+      setSnackbarMessage(`DB 동기화 완료: ${data.data.length}개 게임 로드됨`);
+      setSnackbarOpen(true);
+      
+    } catch (error) {
+      console.error('DB 동기화 오류:', error);
+      setError(error.message);
+    } finally {
+      setFetchLoading(false);
+    }
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <Container maxWidth="md" sx={{ 
@@ -1007,10 +1057,9 @@ export default function Home() {
       }}>
         <Head>
           <title>닌텐도 게임 가격 모니터</title>
-          <meta name="description" content="닌텐도 온라인 스토어 게임 가격을 모니터링하는 앱입니다." />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="description" content="닌텐도 스토어 게임 가격을 모니터링하는 앱입니다." />
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-          <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwXsAAMF7AArBewBIwXsAecF7AIvBewCLwXsAecF7AEjBewAKwXsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMF7AADBewAVwXsAmcF7AP/BewD/wXsA/8F7AP/BewCZwXsAFcF7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwXsAAMF7AGLBewD/wXsA/8F7AP/BewD/wXsAYsF7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACzbQAAwXsA1MF7AP/BewD/wXsA1LNtAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMF7AJnBewD/wXsA/8F7AJkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADBewBVwXsA/8F7AP/BewBVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwXsAMMF7AP/BewD/wXsAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyYMAeMyFAHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALl0AAC5dAAMuXQAZ7l0AMe5dADxuXQA8bl0AMi5dABpuXQADbl0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACxbQAAuXQAJ7l0ALm5dAD/uXQA/7l0AP+5dAD/uXQAubl0ACexbQAAAAAAAAAAAAAAAAAAAAAAAAAAALZ4AAC2eAALuXQAdb10AP+5dAD/uXQA/7l0AP+5dAD/uXQA/7l0AHW2eAALtngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtngAFbh6AMa5dAD/uXQA/7l0AP+5dAD/uXQAxrZ4ABUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAA/D8AAPgfAADwDwAA4AcAAMADAACAAwAAgAMAAIADAACAAwAAgAEAAMABAADgAwAA8A8AAPw/AAD//wAA" />
           <link rel="apple-touch-icon" href="/favicon.svg" />
         </Head>
 
@@ -1024,143 +1073,123 @@ export default function Home() {
           }}
         >
           <Toolbar sx={{ 
-            justifyContent: 'space-between', 
-            px: { xs: 1, sm: 2 },
-            py: { xs: 0.5, sm: 0 },
-            minHeight: { xs: '56px', sm: '64px' }
+            display: 'flex', 
+            justifyContent: 'space-between',
+            minHeight: { xs: '56px', sm: '64px' },
+            padding: { xs: '0 16px', sm: '0 24px' }
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <StorefrontIcon sx={{ mr: 1 }} />
-              <Typography variant="h6" component="div" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
+              <Typography 
+                variant="h6" 
+                component="div" 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  fontSize: { xs: '1rem', sm: '1.2rem' },
+                  whiteSpace: 'nowrap'
+                }}
+              >
                 닌텐도 게임 가격 모니터
               </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
-              {/* 로그인 상태에 따라 버튼 표시 */}
-              {!isAuthLoading && (
-                <>
-                  {session ? (
-                    <>
-                      {/* 로그인한 경우: 사용자 정보 표시 */}
-                      <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', mr: 1 }}>
-                        <Typography variant="body2" sx={{ color: 'white', mr: 1, fontSize: '0.85rem' }}>
-                          {session.user.name}
-                        </Typography>
-                        {session.user.image && (
-                          <Box 
-                            component="img"
-                            src={session.user.image}
-                            alt={session.user.name}
-                            sx={{ 
-                              width: 28, 
-                              height: 28, 
-                              borderRadius: '50%',
-                              border: '1px solid white'
-                            }}
-                          />
-                        )}
-                      </Box>
-                      <IconButton 
-                        color="inherit" 
-                        onClick={() => signOut({ callbackUrl: '/' })}
-                        title="로그아웃"
-                        size="small"
-                        sx={{ display: { xs: 'flex', sm: 'none' } }}
-                      >
-                        <LogoutIcon />
-                      </IconButton>
-                      <Button 
-                        variant="outlined" 
-                        color="inherit" 
-                        startIcon={<LogoutIcon />}
-                        onClick={() => signOut({ callbackUrl: '/' })}
-                        size="small"
-                        sx={{ 
-                          display: { xs: 'none', sm: 'flex' },
-                          borderColor: 'rgba(255,255,255,0.5)',
-                          '&:hover': { borderColor: 'white' }
-                        }}
-                      >
-                        로그아웃
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      {/* 로그인하지 않은 경우: 로그인 버튼은 제거 (로그인하여 동기화 버튼만 사용) */}
-                    </>
-                  )}
-                </>
+              
+              {session && (
+                <Chip
+                  label={session.user.name || session.user.email}
+                  color="default"
+                  size="small"
+                  avatar={<Avatar src={session.user.image} />}
+                  sx={{ ml: 1, display: { xs: 'none', sm: 'flex' } }}
+                />
               )}
-                
-              {/* 앱바 내부에서 표시되는 클라우드 버튼 : 로그인하지 않은 경우에만 표시 */}
-              {!session && !isAuthLoading && (
+            </Box>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {session ? (
+                // 로그인 상태
                 <>
-                  {/* 데스크톱에서는 텍스트 버튼, 모바일에서는 아이콘 버튼으로 표시 */}
-                  <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-                    <Button 
-                      variant="contained" 
-                      color="secondary" 
-                      startIcon={<CloudUploadIcon />}
-                      onClick={signIn}
+                  {/* 모바일 상태 버튼 */}
+                  <Box sx={{ display: { xs: 'flex', sm: 'none' } }}>
+                    <IconButton
                       size="small"
-                      sx={{ 
-                        color: 'white',
-                        bgcolor: '#222',
-                        '&:hover': { bgcolor: '#444' },
-                        '&.Mui-disabled': {
-                          color: 'rgba(255, 255, 255, 0.7)',
-                        },
-                        fontWeight: 'bold',
-                        px: 2
-                      }}
+                      onClick={forceSyncDatabase}
+                      sx={{ color: 'white', p: 0.8 }}
+                      title="DB 동기화"
                     >
-                      로그인하여 동기화
-                    </Button>
-                  </Box>
-                  
-                  {/* 모바일에서는 아이콘 버튼만 표시 */}
-                  <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
-                    <IconButton 
-                      onClick={signIn} 
-                      color="inherit"
-                      size="small"
-                      disabled={migrateLoading}
-                      title="로그인하여 동기화"
-                      sx={{ ml: 1 }}
-                    >
-                      {migrateLoading ? (
-                        <CircularProgress color="inherit" size={20} />
-                      ) : (
-                        <CloudUploadIcon />
-                      )}
+                      <SyncIcon fontSize="small" />
                     </IconButton>
                   </Box>
+                  
+                  {/* 데스크톱 상태 버튼 */}
+                  <Button
+                    variant="outlined"
+                    color="inherit"
+                    size="small"
+                    onClick={forceSyncDatabase}
+                    startIcon={<SyncIcon />}
+                    sx={{ 
+                      display: { xs: 'none', sm: 'flex' }, 
+                      borderColor: 'rgba(255,255,255,0.5)'
+                    }}
+                  >
+                    DB 동기화
+                  </Button>
+                  
+                  {/* 로그아웃 버튼 */}
+                  <Button
+                    variant="outlined"
+                    color="inherit"
+                    size="small"
+                    onClick={() => signOut({ redirect: false })}
+                    startIcon={<LogoutIcon />}
+                    sx={{ 
+                      display: { xs: 'none', sm: 'flex' }, 
+                      borderColor: 'rgba(255,255,255,0.5)'
+                    }}
+                  >
+                    로그아웃
+                  </Button>
+                  
+                  <IconButton
+                    size="small"
+                    onClick={() => signOut({ redirect: false })}
+                    sx={{ 
+                      color: 'white', 
+                      p: 0.8,
+                      display: { xs: 'flex', sm: 'none' }
+                    }}
+                  >
+                    <LogoutIcon fontSize="small" />
+                  </IconButton>
+                </>
+              ) : (
+                // 비로그인 상태
+                <>
+                  <Button
+                    variant="outlined"
+                    color="inherit"
+                    size="small"
+                    onClick={() => signIn('google')}
+                    startIcon={<LoginIcon />}
+                    sx={{ 
+                      borderColor: 'rgba(255,255,255,0.5)',
+                      display: { xs: 'none', sm: 'flex' }
+                    }}
+                  >
+                    로그인
+                  </Button>
+                  
+                  <IconButton
+                    size="small"
+                    onClick={() => signIn('google')}
+                    sx={{ 
+                      color: 'white', 
+                      p: 0.8,
+                      display: { xs: 'flex', sm: 'none' }
+                    }}
+                  >
+                    <LoginIcon fontSize="small" />
+                  </IconButton>
                 </>
               )}
-              
-              <IconButton 
-                color="inherit" 
-                onClick={refreshAllGames} 
-                disabled={refreshing || games.length === 0}
-                title="가격 업데이트"
-                size="medium"
-              >
-                {refreshing ? <CircularProgress size={24} color="inherit" /> : <RefreshIcon />}
-              </IconButton>
-              <IconButton 
-                color="inherit" 
-                onClick={() => {
-                  if (window.confirm('모든 게임을 삭제하시겠습니까?')) {
-                    setGames([]);
-                    localStorage.removeItem('monitoredGames');
-                  }
-                }}
-                disabled={games.length === 0}
-                title="모두 삭제"
-                size="medium"
-              >
-                <DeleteIcon />
-              </IconButton>
             </Box>
           </Toolbar>
         </AppBar>
