@@ -115,7 +115,8 @@ export default function Home() {
   const isAuthLoading = status === "loading";
   const [url, setUrl] = useState('');
   const [games, setGames] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(false);
+  const [addGameLoading, setAddGameLoading] = useState(false);
   const [error, setError] = useState('');
   const [debug, setDebug] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -155,7 +156,7 @@ export default function Home() {
     console.log('세션 정보:', JSON.stringify(session, null, 2));
     
     try {
-      setLoading(true);
+      setFetchLoading(true);
       
       const response = await fetch('/api/user-games', {
         method: 'GET',
@@ -223,7 +224,7 @@ export default function Home() {
       setSnackbarMessage(error.message || '게임 목록을 불러오는데 문제가 발생했습니다.');
       setSnackbarOpen(true);
     } finally {
-      setLoading(false);
+      setFetchLoading(false);
     }
   };
 
@@ -532,8 +533,8 @@ export default function Home() {
       return;
     }
     
-    setLoading(true);
-    setError(''); // 기존 에러 메시지 초기화
+    setAddGameLoading(true);
+    setError('');
     
     try {
       const response = await fetch('/api/game-info', {
@@ -589,7 +590,7 @@ export default function Home() {
       setSnackbarMessage(error.message);
       setSnackbarOpen(true);
     } finally {
-      setLoading(false);
+      setAddGameLoading(false);
     }
   };
 
@@ -934,8 +935,8 @@ export default function Home() {
                 type="submit" 
                 variant="contained" 
                 color="primary" 
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
+                disabled={addGameLoading}
+                startIcon={addGameLoading ? <CircularProgress size={20} /> : <AddIcon />}
                 sx={{ 
                   mt: { xs: 1, sm: 0 },
                   height: { xs: '40px', sm: '56px' },
@@ -987,7 +988,7 @@ export default function Home() {
                   ? '모니터링 중인 게임이 없습니다. 닌텐도 스토어 URL을 입력하여 게임을 추가해보세요.' 
                   : '모니터링 중인 게임이 없습니다. 로그인하면 어느 기기에서든 게임 목록을 동기화할 수 있습니다.'}
               </Typography>
-              {!session && (
+              {!session ? (
                 <Button 
                   variant="contained" 
                   color="primary"
@@ -997,6 +998,25 @@ export default function Home() {
                 >
                   구글 계정으로 로그인
                 </Button>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, mt: 3 }}>
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    startIcon={<LaunchIcon />}
+                    onClick={() => window.open('https://store.nintendo.co.kr/', '_blank', 'noopener,noreferrer')}
+                    sx={{ 
+                      fontWeight: 'bold',
+                      px: 3,
+                      py: 1
+                    }}
+                  >
+                    닌텐도 스토어 방문하기
+                  </Button>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                    닌텐도 스토어에서 게임을 찾아 URL을 복사한 후 위에 붙여넣으세요.
+                  </Typography>
+                </Box>
               )}
             </Box>
           ) : (
@@ -1131,6 +1151,30 @@ export default function Home() {
             </Grid>
           )}
         </Box>
+
+        {/* 닌텐도 스토어 바로가기 버튼 - 게임 목록이 있을 때 */}
+        {games.length > 0 && (
+          <Box sx={{ 
+            width: '100%',
+            display: 'flex', 
+            justifyContent: 'center',
+            mt: 4, 
+            mb: 2
+          }}>
+            <Button 
+              variant="outlined" 
+              color="primary"
+              startIcon={<LaunchIcon />}
+              onClick={() => window.open('https://store.nintendo.co.kr/', '_blank', 'noopener,noreferrer')}
+              sx={{ 
+                borderWidth: 2,
+                '&:hover': { borderWidth: 2 }
+              }}
+            >
+              닌텐도 스토어 방문하기
+            </Button>
+          </Box>
+        )}
 
         {/* 차트 다이얼로그 */}
         <Dialog 
