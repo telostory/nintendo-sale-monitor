@@ -12,6 +12,16 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  Legend as RechartsLegend, 
+  ResponsiveContainer 
+} from 'recharts';
 
 // Material-UI 컴포넌트 import
 import { 
@@ -638,28 +648,22 @@ export default function Home() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container 
-        maxWidth="lg" 
-        sx={{ 
-          pt: 2, 
-          pb: 6,
-          px: { xs: 1, sm: 2 }
-        }}
-      >
+      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1.5, sm: 3 } }}>
         <Head>
           <title>닌텐도 게임 가격 모니터</title>
-          <meta name="description" content="닌텐도 스토어 게임 가격 모니터링 도구" />
+          <meta name="description" content="닌텐도 게임 가격을 모니터링하고 가격 변동을 추적하는 도구입니다." />
           <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-          <link rel="icon" href="data:," />
+          <link rel="apple-touch-icon" href="/favicon.svg" />
         </Head>
 
         <AppBar 
           position="static" 
           sx={{ 
             backgroundColor: '#E60012', 
-            mb: { xs: 3, sm: 4 },
-            borderRadius: { xs: 2, sm: 1 }
+            mb: 3,
+            borderRadius: 1,
+            boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
           }}
         >
           <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 1, sm: 2 } }}>
@@ -743,68 +747,50 @@ export default function Home() {
           </Toolbar>
         </AppBar>
 
-        <Paper 
-          elevation={2} 
-          sx={{ 
-            p: { xs: 2, sm: 3 }, 
-            mb: 4, 
-            borderRadius: { xs: 2, sm: 1 },
-            width: '100%',
-            bgcolor: 'background.paper'
-          }}
-        >
-          <Typography variant="h5" component="h2" sx={{ mb: 2, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-            게임 URL 입력
+        <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
+          <Typography variant="h5" component="h1" gutterBottom sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }}>
+            닌텐도 게임 가격 모니터
           </Typography>
           <form onSubmit={fetchGameInfo}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  label="닌텐도 스토어 게임 URL"
-                  placeholder="https://store.nintendo.co.kr/70010000046397"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  required
-                  size="medium"
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': {
-                      fontSize: { xs: '0.85rem', sm: '0.95rem' }
-                    },
-                    '& .MuiInputBase-input': {
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }
-                  }}
-                  inputProps={{
-                    style: { paddingRight: '14px' }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  disabled={loading}
-                  startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
-                  fullWidth
-                  sx={{
-                    height: '100%',
-                    py: 1.2
-                  }}
-                >
-                  {loading ? '로딩 중' : '추가'}
-                </Button>
-              </Grid>
-            </Grid>
-            {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {error}
-              </Alert>
-            )}
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: 'flex-start', 
+              gap: { xs: 1.5, sm: 2 } 
+            }}>
+              <TextField
+                label="닌텐도 스토어 게임 URL"
+                name="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                error={!!error}
+                helperText={error}
+                fullWidth
+                placeholder="https://store.nintendo.co.kr/games/..."
+                sx={{
+                  minWidth: '100%',
+                  flex: 1,
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '0.9rem', sm: '1rem' },
+                  }
+                }}
+              />
+              <Button 
+                type="submit" 
+                variant="contained" 
+                color="primary" 
+                disabled={loading || cloudSaving}
+                startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
+                sx={{ 
+                  mt: { xs: 1, sm: 0 },
+                  height: { xs: '40px', sm: '56px' },
+                  alignSelf: { xs: 'flex-start', sm: 'center' },
+                  minWidth: { xs: '100%', sm: '120px' }
+                }}
+              >
+                게임 추가
+              </Button>
+            </Box>
           </form>
         </Paper>
 
@@ -812,22 +798,26 @@ export default function Home() {
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            alignItems: { xs: 'flex-start', sm: 'center' },
-            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: 'center',
             mb: 2,
-            gap: { xs: 0.5, sm: 0 },
-            width: '100%',
-            maxWidth: { xs: '100%', sm: '100%', md: '100%', lg: '100%' },
-            mx: 'auto'
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1, sm: 0 },
+            width: '100%'
           }}>
-            <Typography variant="h5" component="h2" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            <Typography variant="h5" component="h2" sx={{ 
+              fontSize: '1.3rem',
+              alignSelf: { xs: 'flex-start', sm: 'center' }
+            }}>
               모니터링 중인 게임
             </Typography>
             {lastRefreshed && (
               <Typography 
                 variant="caption" 
                 color="text.secondary"
-                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                sx={{ 
+                  fontSize: '0.75rem',
+                  alignSelf: { xs: 'flex-start', sm: 'center' }
+                }}
               >
                 마지막 업데이트: {formattedLastRefreshed}
               </Typography>
@@ -836,14 +826,15 @@ export default function Home() {
           
           {games.length === 0 ? (
             <Paper 
-              elevation={2} 
+              elevation={1} 
               sx={{ 
-                p: { xs: 2, sm: 3 }, 
+                p: 3, 
                 textAlign: 'center', 
-                borderRadius: { xs: 2, sm: 1 }
+                borderRadius: 1,
+                boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
               }}
             >
-              <Typography color="text.secondary" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
+              <Typography color="text.secondary" sx={{ fontSize: '1rem' }}>
                 아직 모니터링 중인 게임이 없습니다.
               </Typography>
             </Paper>
@@ -861,32 +852,29 @@ export default function Home() {
                   xs={12} 
                   key={game.id}
                 >
-                  <Card 
-                    elevation={2} 
+                  <Paper 
+                    elevation={1} 
                     sx={{ 
                       width: '100%',
-                      '&:hover': { boxShadow: 6 },
+                      '&:hover': { boxShadow: 3 },
                       transition: 'box-shadow 0.3s',
-                      borderRadius: { xs: 2, sm: 1 }
+                      borderRadius: 1,
+                      boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
                     }}
                   >
-                    <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
+                    <Box sx={{ p: { xs: 2, sm: 3 } }}>
                       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, width: '100%' }}>
-                        <Box sx={{ flexGrow: 1, width: { xs: '100%', sm: 'calc(100% - 140px)' } }}>
+                        <Box sx={{ flexGrow: 1, width: { xs: '100%', sm: 'calc(100% - 140px)' }, mb: { xs: 2, sm: 0 } }}>
                           <Typography 
                             variant="h6" 
-                            gutterBottom
+                            component="h3" 
                             sx={{ 
-                              fontSize: { xs: '1rem', sm: '1.25rem' }, 
-                              mb: 0.5,
-                              width: '100%',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
+                              fontSize: { xs: '1rem', sm: '1.1rem' }, 
+                              fontWeight: 'bold',
+                              mb: 1 
                             }}
-                            title={game.title || '제목 없음'}
                           >
-                            {game.title || '제목 없음'}
+                            {game.title}
                           </Typography>
                           <Typography 
                             variant="h5" 
@@ -948,17 +936,17 @@ export default function Home() {
                         <Box sx={{ 
                           display: 'flex',
                           flexDirection: 'row',
-                          justifyContent: 'flex-end',
+                          justifyContent: { xs: 'flex-start', sm: 'flex-end' },
                           alignItems: 'center',
                           width: { xs: '100%', sm: '140px' },
                           minWidth: { sm: '140px' },
                           flexShrink: 0,
-                          mt: { xs: 2, sm: 0 }
+                          mt: { xs: 1, sm: 0 }
                         }}>
                           <Box sx={{ 
                             display: 'flex', 
                             gap: 1,
-                            justifyContent: { xs: 'center', sm: 'flex-end' }
+                            justifyContent: { xs: 'flex-start', sm: 'flex-end' }
                           }}>
                             <IconButton 
                               color="primary"
@@ -1009,8 +997,8 @@ export default function Home() {
                           </Box>
                         </Box>
                       </Box>
-                    </CardContent>
-                  </Card>
+                    </Box>
+                  </Paper>
                 </Grid>
               ))}
             </Grid>
@@ -1027,7 +1015,8 @@ export default function Home() {
             '& .MuiDialog-paper': {
               mx: { xs: 1, sm: 2 },
               width: { xs: 'calc(100% - 16px)', sm: '90%', md: '80%', lg: '70%' },
-              borderRadius: { xs: 2, sm: 1 }
+              borderRadius: { xs: 1, sm: 1 },
+              maxHeight: { xs: 'calc(100% - 32px)', sm: 'auto' }
             }
           }}
         >
@@ -1061,7 +1050,68 @@ export default function Home() {
                 }}
               >
                 <Box sx={{ height: { xs: 200, sm: 300 }, mb: { xs: 2, sm: 3 }, width: '100%' }}>
-                  <Line data={getChartData(selectedGame)} options={chartOptions} />
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart 
+                      data={selectedGame.priceHistory.map(record => ({
+                        date: record.date,
+                        price: record.price,
+                        isVirtual: record.isVirtual || false,
+                        priceFormatted: record.priceFormatted
+                      }))} 
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getMonth() + 1}/${date.getDate()}`;
+                        }}
+                        stroke="#666"
+                      />
+                      <YAxis 
+                        tickFormatter={(value) => `₩${value.toLocaleString()}`}
+                        stroke="#666"
+                        domain={['dataMin - 5000', 'dataMax + 5000']}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value, name) => [`₩${value.toLocaleString()}`, '가격']}
+                        labelFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                        }}
+                        contentStyle={{ 
+                          backgroundColor: '#fff', 
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          padding: '8px'
+                        }}
+                      />
+                      <RechartsLegend />
+                      <Line 
+                        type="monotone" 
+                        dataKey="price" 
+                        name="가격"
+                        stroke="#E60012" 
+                        strokeWidth={2} 
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          const isVirtual = payload.isVirtual;
+                          return (
+                            <circle 
+                              cx={cx} 
+                              cy={cy} 
+                              r={isVirtual ? 3 : 5} 
+                              fill={isVirtual ? 'rgba(200, 200, 200, 0.5)' : 'rgba(230, 0, 18, 0.5)'} 
+                              stroke={isVirtual ? 'rgba(200, 200, 200, 0.8)' : '#E60012'} 
+                              strokeWidth={2}
+                            />
+                          );
+                        }}
+                        activeDot={{ r: 8, fill: '#E60012', stroke: '#fff', strokeWidth: 2 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </Box>
                 <Divider sx={{ my: 2, width: '100%' }} />
                 <Typography 
