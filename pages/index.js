@@ -11,6 +11,7 @@ import {
   Legend as RechartsLegend, 
   ResponsiveContainer 
 } from 'recharts';
+import { useSession, signIn, signOut } from "next-auth/react";
 
 // Material-UI 컴포넌트 import
 import { 
@@ -56,6 +57,9 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloudIcon from '@mui/icons-material/Cloud';
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import PersonIcon from '@mui/icons-material/Person';
+import LogoutIcon from '@mui/icons-material/Logout';
+import LoginIcon from '@mui/icons-material/Login';
 
 // 테마 설정
 const theme = createTheme({
@@ -107,6 +111,8 @@ const theme = createTheme({
 });
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const isAuthLoading = status === "loading";
   const [url, setUrl] = useState('');
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -592,6 +598,85 @@ export default function Home() {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+              {/* 로그인 상태에 따라 버튼 표시 */}
+              {!isAuthLoading && (
+                <>
+                  {session ? (
+                    <>
+                      {/* 로그인한 경우: 사용자 정보 표시 */}
+                      <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', mr: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'white', mr: 1, fontSize: '0.85rem' }}>
+                          {session.user.name}
+                        </Typography>
+                        {session.user.image && (
+                          <Box 
+                            component="img"
+                            src={session.user.image}
+                            alt={session.user.name}
+                            sx={{ 
+                              width: 28, 
+                              height: 28, 
+                              borderRadius: '50%',
+                              border: '1px solid white'
+                            }}
+                          />
+                        )}
+                      </Box>
+                      <IconButton 
+                        color="inherit" 
+                        onClick={() => signOut({ callbackUrl: '/' })}
+                        title="로그아웃"
+                        size="small"
+                        sx={{ display: { xs: 'flex', sm: 'none' } }}
+                      >
+                        <LogoutIcon />
+                      </IconButton>
+                      <Button 
+                        variant="outlined" 
+                        color="inherit" 
+                        startIcon={<LogoutIcon />}
+                        onClick={() => signOut({ callbackUrl: '/' })}
+                        size="small"
+                        sx={{ 
+                          display: { xs: 'none', sm: 'flex' },
+                          borderColor: 'rgba(255,255,255,0.5)',
+                          '&:hover': { borderColor: 'white' }
+                        }}
+                      >
+                        로그아웃
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {/* 로그인하지 않은 경우: 로그인 버튼 표시 */}
+                      <IconButton 
+                        color="inherit" 
+                        onClick={() => signIn()}
+                        title="로그인"
+                        size="small"
+                        sx={{ display: { xs: 'flex', sm: 'none' } }}
+                      >
+                        <LoginIcon />
+                      </IconButton>
+                      <Button 
+                        variant="outlined" 
+                        color="inherit" 
+                        startIcon={<LoginIcon />}
+                        onClick={() => signIn()}
+                        size="small"
+                        sx={{ 
+                          display: { xs: 'none', sm: 'flex' },
+                          borderColor: 'rgba(255,255,255,0.5)',
+                          '&:hover': { borderColor: 'white' }
+                        }}
+                      >
+                        로그인
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+                
               {/* 데스크톱에서는 텍스트 버튼, 모바일에서는 아이콘 버튼으로 표시 */}
               <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
                 <Button 
