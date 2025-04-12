@@ -153,7 +153,6 @@ export default function Home() {
     }
     
     console.log('사용자 게임 목록 요청 시작. 사용자 ID:', userId);
-    console.log('세션 정보:', JSON.stringify(session, null, 2));
     
     try {
       setFetchLoading(true);
@@ -170,9 +169,6 @@ export default function Home() {
       
       if (response.status === 401) {
         console.log('사용자 인증 실패 (401)');
-        
-        // 세션 정보와 응답 헤더 로깅
-        console.log('현재 세션:', JSON.stringify(session, null, 2));
         
         const responseClone = response.clone();
         const errorText = await responseClone.text();
@@ -192,7 +188,6 @@ export default function Home() {
         const errorText = await responseClone.text();
         console.log('오류 응답 내용:', errorText);
         
-        // 401 이외의 오류는 스낵바로 표시 (입력 폼 에러 대신)
         const errorData = await response.json();
         throw new Error(errorData.message || '서버에서 게임 목록을 가져오는데 실패했습니다.');
       }
@@ -201,26 +196,32 @@ export default function Home() {
       console.log('API 응답 데이터:', JSON.stringify(data, null, 2));
       
       if (data.success && data.data) {
-        setGames(data.data);
-        console.log('게임 목록 설정 완료:', data.data.length);
-        
-        // 서버에서 가져온 데이터의 마지막 업데이트 시간 설정
-        if (data.data.length > 0) {
-          const latestUpdate = Math.max(...data.data.map(game => 
-            game.lastUpdated ? new Date(game.lastUpdated).getTime() : 0
-          ));
+        // 게임 데이터가 있는 경우에만 상태 업데이트
+        if (Array.isArray(data.data)) {
+          setGames(data.data);
+          console.log('게임 목록 설정 완료:', data.data.length);
           
-          if (latestUpdate > 0) {
-            setLastRefreshed(new Date(latestUpdate));
-            console.log('마지막 업데이트 시간 설정:', new Date(latestUpdate));
+          // 서버에서 가져온 데이터의 마지막 업데이트 시간 설정
+          if (data.data.length > 0) {
+            const latestUpdate = Math.max(...data.data.map(game => 
+              game.lastUpdated ? new Date(game.lastUpdated).getTime() : 0
+            ));
+            
+            if (latestUpdate > 0) {
+              setLastRefreshed(new Date(latestUpdate));
+              console.log('마지막 업데이트 시간 설정:', new Date(latestUpdate));
+            }
           }
+        } else {
+          console.error('서버에서 받은 게임 데이터가 배열이 아닙니다:', data.data);
+          setSnackbarMessage('게임 목록 형식이 잘못되었습니다. 관리자에게 문의하세요.');
+          setSnackbarOpen(true);
         }
       } else {
         console.log('서버에서 받은 데이터가 유효하지 않습니다:', data);
       }
     } catch (error) {
       console.error('게임 목록 불러오기 오류:', error);
-      // 에러 상태를 TextField가 아닌 스낵바에 표시
       setSnackbarMessage(error.message || '게임 목록을 불러오는데 문제가 발생했습니다.');
       setSnackbarOpen(true);
     } finally {
@@ -230,16 +231,21 @@ export default function Home() {
 
   // 로그인 상태에 따라 게임 목록 로드 방식을 달리함
   useEffect(() => {
+    if (status === "loading") return; // 인증 상태 로딩 중일 때는 아무것도 하지 않음
+    
     if (session && session.user) {
       // 로그인된 경우: 서버에서 게임 목록 로드
+      console.log('로그인 상태 감지, 서버에서 게임 목록 로드 시작');
       fetchUserGames();
-    } else if (status !== "loading") {
+    } else {
       // 로그인되지 않은 경우: 로컬 스토리지에서 게임 목록 로드
+      console.log('비로그인 상태, 로컬 스토리지에서 게임 목록 로드');
       const savedGames = localStorage.getItem('monitoredGames');
       if (savedGames) {
         try {
           const parsedGames = JSON.parse(savedGames);
           setGames(parsedGames);
+          console.log('로컬 스토리지에서 게임 목록 로드 완료:', parsedGames.length);
           
           // 마지막 새로고침 시간 가져오기
           const lastRefreshTime = localStorage.getItem('lastRefreshed');
@@ -248,7 +254,10 @@ export default function Home() {
           }
         } catch (error) {
           console.error('저장된 게임 목록을 불러오는 중 오류 발생:', error);
+          localStorage.removeItem('monitoredGames'); // 손상된 데이터 제거
         }
+      } else {
+        console.log('로컬 스토리지에 저장된 게임 목록 없음');
       }
     }
   }, [session, status]);
@@ -533,40 +542,19 @@ export default function Home() {
         return;
       }
       
-      // URL 정규화: 프로토콜 표준화, 쿼리 파라미터 제거, 트레일링 슬래시 제거
-      let cleanUrl = url.trim().split('?')[0].replace(/\/$/, '');
+      // URL 정리 - 쿼리 파라미터만 제거
+      const cleanUrl = url.trim().split('?')[0];
+      console.log('정리된 URL:', cleanUrl);
       
-      // URL에서 'https://' 부분을 표준화
-      if (cleanUrl.startsWith('http://')) {
-        cleanUrl = cleanUrl.replace('http://', 'https://');
-      } else if (!cleanUrl.startsWith('https://')) {
-        cleanUrl = 'https://' + cleanUrl;
-      }
-      
-      console.log('정규화된 URL:', cleanUrl);
-      
-      // 닌텐도 URL 형식 확인 및 보정
-      let validNintendoUrl = cleanUrl;
-      
-      try {
-        const urlObj = new URL(cleanUrl);
-        // 닌텐도 스토어 도메인 확인
-        const isNintendoDomain = urlObj.hostname.includes('nintendo.co.kr') || 
-                                 urlObj.hostname.includes('nintendo.com');
-        
-        if (!isNintendoDomain) {
-          setError('닌텐도 스토어 게임 URL을 입력해주세요.');
+      // 로그인하지 않은 경우: 로컬 목록에서 중복 확인
+      if (!session) {
+        const isDuplicate = games.some(game => game.url.split('?')[0] === cleanUrl);
+        if (isDuplicate) {
+          setError('이미 등록된 게임입니다.');
           setAddGameLoading(false);
           return;
         }
-      } catch (urlError) {
-        console.error('URL 파싱 오류:', urlError);
-        setError('유효한 URL을 입력해주세요.');
-        setAddGameLoading(false);
-        return;
       }
-      
-      console.log('게임 추가 시작:', validNintendoUrl);
       
       // 게임 정보 가져오기
       const response = await fetch('/api/game-info', {
@@ -574,7 +562,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: validNintendoUrl }),
+        body: JSON.stringify({ url: cleanUrl }),
       });
       
       const responseClone = response.clone();
@@ -614,14 +602,14 @@ export default function Home() {
       };
       
       const newGame = {
-        url: validNintendoUrl,
+        url: cleanUrl,
         title: data.title,
         price: priceText,                 // price 필드 사용 - 서버 모델과 일치
         priceHistory: [priceRecord],
         lastUpdated: new Date().toISOString()
       };
       
-      console.log('서버에 저장할 게임 데이터:', JSON.stringify(newGame, null, 2));
+      console.log('저장할 게임 데이터:', JSON.stringify(newGame, null, 2));
       
       if (session && session.user) {
         // 로그인된 경우: 서버에 게임 추가
@@ -649,28 +637,13 @@ export default function Home() {
         }
         
         if (!serverResponse.ok) {
-          // 중복 키 오류 분석
+          // 중복 키 오류 처리
           if (serverData.error === 'duplicate_key') {
             console.log('중복된 게임 - 이미 등록된 게임으로 간주');
+            setError('이미 등록된 게임입니다. 새로고침 후 확인하세요.');
             
-            // 중복 키 상세 정보 분석
-            const details = serverData.details || {};
-            console.log('중복 키 세부정보:', JSON.stringify(details, null, 2));
-            
-            // 중복된 URL 표시
-            const duplicateUrl = details.keyValue?.url || validNintendoUrl;
-            const shortUrl = duplicateUrl.split('/').pop();
-            
-            setSnackbarMessage(`이미 등록된 게임입니다 (ID: ${shortUrl}). 새로고침 후 확인하세요.`);
-            setSnackbarOpen(true);
-            
-            try {
-              // 게임 목록 새로고침
-              await fetchUserGames();
-            } catch (refreshErr) {
-              console.error('게임 목록 새로고침 실패:', refreshErr);
-            }
-            
+            // DB 동기화를 위해 게임 목록 다시 불러오기
+            await fetchUserGames();
             setUrl('');
             setAddGameLoading(false);
             return;
@@ -682,16 +655,31 @@ export default function Home() {
         // 성공 응답에서 저장된 게임 정보 가져오기
         if (serverData.success && serverData.data) {
           // 서버에서 반환한 데이터로 게임 상태 업데이트
-          setGames(prevGames => [serverData.data, ...prevGames]);
+          setGames(prevGames => {
+            // 중복 방지를 위해 이미 있는 게임이면 제거 후 추가
+            const existingIndex = prevGames.findIndex(
+              g => g._id === serverData.data._id || g.url === serverData.data.url
+            );
+            
+            if (existingIndex >= 0) {
+              // 기존 게임 업데이트
+              const updatedGames = [...prevGames];
+              updatedGames[existingIndex] = serverData.data;
+              return updatedGames;
+            } else {
+              // 새 게임 추가
+              return [serverData.data, ...prevGames];
+            }
+          });
+          
+          // 전체 목록도 새로고침 (혹시 놓친 게임이 있을 수 있으므로)
+          setTimeout(() => {
+            fetchUserGames();
+          }, 1000);
         } else {
-          // 서버 응답에 데이터가 없는 경우 - 클라이언트 데이터로 UI 업데이트
-          setGames(prevGames => [
-            {
-              ...newGame,
-              id: Date.now().toString() // 임시 ID
-            },
-            ...prevGames
-          ]);
+          // 서버 응답에 데이터가 없는 경우 - 게임 목록 전체 새로고침
+          console.log('서버 응답에 데이터가 없어 게임 목록 새로고침');
+          await fetchUserGames();
         }
         
       } else {
@@ -724,10 +712,9 @@ export default function Home() {
   };
 
   // 게임 삭제 다이얼로그 열기
-  const handleDeleteDialogOpen = (id) => {
-    const gameToDelete = games.find(game => game.id === id);
-    if (gameToDelete) {
-      setGameToDelete(gameToDelete);
+  const handleDeleteDialogOpen = (game) => {
+    if (game) {
+      setGameToDelete(game);
       setDeleteDialogOpen(true);
     }
   };
@@ -738,7 +725,18 @@ export default function Home() {
     setGameToDelete(null);
   };
 
-  const removeGame = async (id) => {
+  const removeGame = async (game) => {
+    if (!game) {
+      console.error('삭제할 게임 정보가 없습니다.');
+      return;
+    }
+    
+    // 게임 ID 확인 (MongoDB ID 또는 클라이언트 ID)
+    const gameId = game._id || game.id;
+    const gameUrl = game.url;
+    
+    console.log('게임 삭제 요청:', { gameId, gameUrl, title: game.title });
+    
     if (session && session.user) {
       // 로그인된 경우: 서버에서 게임 삭제
       try {
@@ -747,57 +745,69 @@ export default function Home() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ gameId: id }),
+          body: JSON.stringify({ gameId: gameId || gameUrl }),
+          credentials: 'include',
         });
         
+        const responseData = await response.json();
+        
         if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.message || '서버에서 게임을 삭제하는데 실패했습니다.');
+          throw new Error(responseData.message || '서버에서 게임을 삭제하는데 실패했습니다.');
         }
         
+        console.log('서버 삭제 응답:', responseData);
+        
         // 삭제 성공 후 로컬 상태 업데이트
-        const deletedGame = games.find(game => game._id === id || game.id === id);
-        const updatedGames = games.filter(game => (game._id !== id && game.id !== id));
-        setGames(updatedGames);
+        setGames(prev => prev.filter(g => 
+          g._id !== gameId && 
+          g.id !== gameId && 
+          g.url !== gameUrl
+        ));
         
         // 선택된 게임이 삭제되면 선택 해제
-        if (selectedGame && (selectedGame._id === id || selectedGame.id === id)) {
+        if (selectedGame && (
+          selectedGame._id === gameId || 
+          selectedGame.id === gameId || 
+          selectedGame.url === gameUrl
+        )) {
           setSelectedGame(null);
           setChartDialogOpen(false);
         }
         
         // 게임 삭제 완료 메시지
-        if (deletedGame) {
-          setSnackbarMessage(`"${deletedGame.title}" 게임이 삭제되었습니다.`);
-          setSnackbarOpen(true);
-        }
+        setSnackbarMessage(`"${game.title}" 게임이 삭제되었습니다.`);
+        setSnackbarOpen(true);
+        
+        // DB 상태와 UI 동기화를 위해 전체 목록 새로고침
+        setTimeout(fetchUserGames, 500);
         
       } catch (error) {
         console.error('게임 삭제 오류:', error);
         setError(error.message);
+        setSnackbarMessage(`게임 삭제 중 오류: ${error.message}`);
+        setSnackbarOpen(true);
       }
     } else {
       // 로그인되지 않은 경우: 로컬 상태에서만 삭제
-      const gameToRemove = games.find(game => game.id === id);
-      const updatedGames = games.filter(game => game.id !== id);
-      setGames(updatedGames);
+      setGames(prev => prev.filter(g => g.id !== gameId && g.url !== gameUrl));
       
       // 선택된 게임이 삭제되면 선택 해제
-      if (selectedGame && selectedGame.id === id) {
+      if (selectedGame && (selectedGame.id === gameId || selectedGame.url === gameUrl)) {
         setSelectedGame(null);
         setChartDialogOpen(false);
       }
       
-      // 모든 게임이 삭제되었다면 로컬 스토리지에서도 삭제
+      // 로컬 스토리지 업데이트
+      const updatedGames = games.filter(g => g.id !== gameId && g.url !== gameUrl);
       if (updatedGames.length === 0) {
         localStorage.removeItem('monitoredGames');
+      } else {
+        localStorage.setItem('monitoredGames', JSON.stringify(updatedGames));
       }
       
       // 게임 삭제 완료 메시지
-      if (gameToRemove) {
-        setSnackbarMessage(`"${gameToRemove.title}" 게임이 삭제되었습니다.`);
-        setSnackbarOpen(true);
-      }
+      setSnackbarMessage(`"${game.title}" 게임이 삭제되었습니다.`);
+      setSnackbarOpen(true);
     }
     
     closeDeleteDialog();
@@ -870,7 +880,7 @@ export default function Home() {
     const hasDiscount = lastPrice && lastPrice.discountInfo;
     
     return (
-      <Paper key={game.id} sx={{ 
+      <Paper key={game._id || game.id} sx={{ 
         mb: 2, 
         p: 2,
         position: 'relative'
@@ -1286,7 +1296,7 @@ export default function Home() {
                 <Grid 
                   item 
                   xs={12} 
-                  key={game.id}
+                  key={game._id || game.id}
                 >
                   {renderGameCard(game)}
                 </Grid>
@@ -1540,7 +1550,7 @@ export default function Home() {
               취소
             </Button>
             <Button 
-              onClick={() => gameToDelete && removeGame(gameToDelete.id)} 
+              onClick={() => gameToDelete && removeGame(gameToDelete)} 
               color="error" 
               variant="contained"
               size="small"

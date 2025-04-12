@@ -93,20 +93,12 @@ export default async function handler(req, res) {
           });
         }
         
-        // URL 완전히 정규화 (쿼리 파라미터, 트레일링 슬래시, 프로토콜 등 처리)
-        let cleanUrl = url.split('?')[0].replace(/\/$/, '');
-        
-        // URL에서 'https://' 부분을 표준화
-        if (cleanUrl.startsWith('http://')) {
-          cleanUrl = cleanUrl.replace('http://', 'https://');
-        } else if (!cleanUrl.startsWith('https://')) {
-          cleanUrl = 'https://' + cleanUrl;
-        }
-        
-        console.log('정규화된 URL:', cleanUrl);
+        // URL 표준화 - 기본적인 정리만 수행 (쿼리 파라미터 제거)
+        const cleanUrl = url.split('?')[0];
+        console.log('정리된 URL:', cleanUrl);
         
         try {
-          // 중복 게임 확인 - 철저한 확인을 위해 userId와 cleanUrl 두 가지로 검색
+          // 정확히 일치하는 URL로만 중복 게임 확인
           console.log(`중복 게임 확인: userId=${userId}, cleanUrl=${cleanUrl}`);
           const existingGame = await Game.findOne({ 
             userId, 
@@ -120,35 +112,6 @@ export default async function handler(req, res) {
               message: '이미 등록된 게임입니다.',
               data: existingGame
             });
-          }
-          
-          // 도메인만 추출하여 추가 검색 (닌텐도 스토어 도메인이 변경되는 경우)
-          const urlObj = new URL(cleanUrl);
-          const domain = urlObj.hostname;
-          const pathWithoutParams = urlObj.pathname;
-          console.log(`URL 파싱 결과 - 도메인: ${domain}, 경로: ${pathWithoutParams}`);
-          
-          // 제품 ID를 URL에서 추출 (닌텐도 URL 형식: store.nintendo.co.kr/games/PRODUCT_ID)
-          const pathParts = pathWithoutParams.split('/');
-          const productId = pathParts[pathParts.length - 1];
-          
-          if (productId && productId.length > 0) {
-            console.log(`추출된 제품 ID: ${productId}`);
-            
-            // 이 제품 ID를 포함하는 다른 URL도 검색
-            const gamesWithSameProductId = await Game.find({
-              userId,
-              url: { $regex: productId }
-            });
-            
-            if (gamesWithSameProductId.length > 0) {
-              console.log('제품 ID로 게임 찾음:', gamesWithSameProductId[0]._id, gamesWithSameProductId[0].title);
-              return res.status(200).json({
-                success: true,
-                message: '이미 등록된 게임입니다 (다른 URL 형식으로 등록됨).',
-                data: gamesWithSameProductId[0]
-              });
-            }
           }
           
           console.log('새 게임 등록 진행: 중복 게임 없음');
@@ -186,7 +149,7 @@ export default async function handler(req, res) {
             console.log('중복 키 패턴:', keyPattern);
             console.log('중복 키 값:', keyValue);
             
-            // 다시 한번 확인 (레이스 컨디션 대응)
+            // 다시 한번 정확한 URL로 확인 시도
             const existingGame = await Game.findOne({
               userId,
               url: cleanUrl
@@ -199,30 +162,6 @@ export default async function handler(req, res) {
                 message: '이미 등록된 게임입니다.',
                 data: existingGame
               });
-            }
-            
-            // 도메인과 경로로 더 넓게 검색
-            try {
-              const urlObj = new URL(cleanUrl);
-              const domain = urlObj.hostname;
-              const path = urlObj.pathname;
-              
-              // 유사한 URL 패턴 검색
-              const similarGames = await Game.find({
-                userId,
-                url: { $regex: path.split('/').pop() }
-              });
-              
-              if (similarGames.length > 0) {
-                console.log('유사 URL로 게임 찾음:', similarGames[0]._id, similarGames[0].title);
-                return res.status(200).json({
-                  success: true,
-                  message: '유사한 URL로 이미 등록된 게임입니다.',
-                  data: similarGames[0]
-                });
-              }
-            } catch (parseError) {
-              console.error('URL 파싱 오류:', parseError);
             }
             
             // 명확한 오류 정보 반환
@@ -318,29 +257,69 @@ export default async function handler(req, res) {
           });
         }
         
+        console.log(`게임 삭제 요청: gameId=${gameId}, userId=${userId}`);
+        
         // 해당 사용자의 게임인지 확인 후 삭제
-        const deletedGame = await Game.findOneAndDelete({ 
-          _id: gameId, 
-          userId: userId 
-        });
+        // MongoDB ID 또는 기타 ID 형식 모두 처리
+        let deletedGame;
+        
+        try {
+          // 유효한 MongoDB ObjectId 형식인 경우
+          deletedGame = await Game.findOneAndDelete({ 
+            _id: gameId, 
+            userId: userId 
+          });
+        } catch (idError) {
+          console.log('ObjectId 형식이 아님, URL로 검색 시도');
+        }
+        
+        // MongoDB ID로 찾지 못한 경우 URL로 시도
+        if (!deletedGame) {
+          deletedGame = await Game.findOneAndDelete({
+            url: gameId,
+            userId: userId
+          });
+        }
+        
+        // 그래도 찾지 못한 경우 클라이언트 ID로 시도
+        if (!deletedGame) {
+          // 사용자별 모든 게임을 가져와서 클라이언트 ID와 비교
+          const allGames = await Game.find({ userId });
+          
+          // 클라이언트에서 생성한 ID가 있는지 확인
+          const gameToDelete = allGames.find(game => 
+            game.clientId === gameId
+          );
+          
+          if (gameToDelete) {
+            deletedGame = await Game.findByIdAndDelete(gameToDelete._id);
+          }
+        }
         
         if (!deletedGame) {
+          console.log('삭제할 게임을 찾을 수 없음:', gameId);
           return res.status(404).json({ 
             success: false, 
             message: '게임을 찾을 수 없거나 삭제 권한이 없습니다.' 
           });
         }
         
+        console.log('게임 삭제 성공:', deletedGame._id, deletedGame.title);
+        
         return res.status(200).json({
           success: true,
           message: '게임이 삭제되었습니다.',
-          data: { gameId: deletedGame._id }
+          data: { 
+            gameId: deletedGame._id,
+            url: deletedGame.url
+          }
         });
       } catch (error) {
         console.error('게임 삭제 오류:', error);
         return res.status(500).json({ 
           success: false, 
-          message: '게임을 삭제하는 중 오류가 발생했습니다.'
+          message: '게임을 삭제하는 중 오류가 발생했습니다.',
+          error: error.message
         });
       }
       
