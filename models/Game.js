@@ -9,7 +9,7 @@ const priceHistorySchema = new mongoose.Schema({
     originalPrice: { type: Number },           // 원래 가격
     discountAmount: { type: Number },          // 할인 금액
     discountRate: { type: Number },            // 할인율 (%)
-    formattedDiscount: { type: String }        // 포맷된 할인 금액 (예: -₩5,000)
+    discountFormatted: { type: String }        // 포맷된 할인 금액 (예: -₩5,000)
   }
 }, { _id: false });
 

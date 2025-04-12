@@ -518,6 +518,58 @@ export default function Home() {
     }
   }, [games.length]);
 
+  // 서버에 게임 추가
+  const addGameToServer = async (gameData) => {
+    console.log('서버에 게임 추가 시도:', JSON.stringify(gameData, null, 2));
+    
+    try {
+      const response = await fetch('/api/user-games', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // 쿠키 포함
+        body: JSON.stringify(gameData),
+      });
+      
+      console.log('서버 응답 상태코드:', response.status);
+      
+      // 응답을 복제하여 두 번 읽을 수 있도록 함
+      const responseClone = response.clone();
+      
+      if (!response.ok) {
+        let errorMessage = '게임을 추가하는 중 오류가 발생했습니다.';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error('서버 오류 응답:', errorData);
+        } catch (parseError) {
+          // JSON 파싱 실패 시 텍스트로 읽기 시도
+          const errorText = await responseClone.text();
+          console.error('서버 오류 응답 (텍스트):', errorText);
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const data = await response.json();
+      console.log('게임 추가 성공 응답:', data);
+      
+      // 성공적으로 추가된 게임으로 상태 업데이트
+      if (data.success && data.data) {
+        setGames(prevGames => [data.data, ...prevGames]);
+        setSnackbarMessage('게임이 성공적으로 추가되었습니다.');
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.error('게임 추가 API 요청 오류:', error);
+      setSnackbarMessage(error.message || '게임을 추가하는 중 오류가 발생했습니다.');
+      setSnackbarOpen(true);
+      
+      // 서버 저장에 실패했지만 UI에 임시로 표시
+      setGames(prevGames => [gameData, ...prevGames]);
+    }
+  };
+
   const handleAddGame = async () => {
     if (!url) {
       // 에러 상태를 TextField에 표시하는 대신 스낵바로 표시
@@ -537,6 +589,8 @@ export default function Home() {
     setError('');
     
     try {
+      console.log('게임 정보 가져오기 요청 시작:', url);
+      
       const response = await fetch('/api/game-info', {
         method: 'POST',
         headers: {
@@ -545,7 +599,20 @@ export default function Home() {
         body: JSON.stringify({ url }),
       });
       
-      const data = await response.json();
+      console.log('게임 정보 응답 상태:', response.status);
+      
+      // 응답을 복제하여 오류 시 텍스트로도 읽을 수 있게 함
+      const responseClone = response.clone();
+      let data;
+      
+      try {
+        data = await response.json();
+        console.log('게임 정보 응답 데이터:', data);
+      } catch (jsonError) {
+        const text = await responseClone.text();
+        console.error('JSON 파싱 오류, 원시 응답:', text);
+        throw new Error('서버 응답을 처리할 수 없습니다.');
+      }
       
       if (!response.ok) {
         // 게임을 찾을 수 없는 경우 특별 메시지 추가
@@ -584,7 +651,7 @@ export default function Home() {
         lastUpdated: new Date().toISOString()
       };
       
-      console.log('추가할 게임 정보:', newGame);
+      console.log('추가할 게임 정보:', JSON.stringify(newGame, null, 2));
       
       if (session && session.user) {
         // 로그인된 경우: 서버에 게임 추가
@@ -592,6 +659,8 @@ export default function Home() {
       } else {
         // 로그인되지 않은 경우: 로컬 상태에만 추가
         setGames(prevGames => [newGame, ...prevGames]);
+        setSnackbarMessage('게임이 추가되었습니다.');
+        setSnackbarOpen(true);
       }
       
       setUrl('');
@@ -600,39 +669,10 @@ export default function Home() {
     } catch (error) {
       console.error('게임 추가 오류:', error);
       // 에러 상태를 TextField가 아닌 스낵바에 표시
-      setSnackbarMessage(error.message);
+      setSnackbarMessage(error.message || '게임을 추가하는 중 오류가 발생했습니다.');
       setSnackbarOpen(true);
     } finally {
       setAddGameLoading(false);
-    }
-  };
-
-  // 서버에 게임 추가
-  const addGameToServer = async (gameData) => {
-    try {
-      const response = await fetch('/api/user-games', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(gameData),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || '서버에 게임을 추가하는데 실패했습니다.');
-      }
-      
-      // 서버에서 최신 게임 목록 다시 가져오기
-      fetchUserGames();
-      
-      setSnackbarMessage('게임이 성공적으로 추가되었습니다.');
-      setSnackbarOpen(true);
-      
-    } catch (error) {
-      console.error('서버 게임 추가 오류:', error);
-      setError(error.message);
     }
   };
 
