@@ -714,8 +714,12 @@ export default function Home() {
           mb: 4, 
           borderRadius: { xs: 2, sm: 1 }, 
           width: '100%',
-          bgcolor: 'background.paper'
+          bgcolor: 'background.paper',
+          boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
         }}>
+          <Typography variant="h5" component="h2" sx={{ mb: 2, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+            게임 URL 입력
+          </Typography>
           <form onSubmit={fetchGameInfo}>
             <Grid container spacing={2} sx={{ width: '100%' }}>
               <Grid item xs={12} sx={{ width: '100%' }}>
@@ -796,7 +800,15 @@ export default function Home() {
           </Box>
           
           {games.length === 0 ? (
-            <Paper elevation={1} sx={{ p: 4, textAlign: 'center', borderRadius: { xs: 2, sm: 1 }, width: '100%', mx: 'auto' }}>
+            <Paper elevation={2} sx={{ 
+              p: { xs: 2, sm: 3 }, 
+              textAlign: 'center', 
+              borderRadius: { xs: 2, sm: 1 }, 
+              width: '100%', 
+              mx: 'auto',
+              bgcolor: 'background.paper',
+              boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
+            }}>
               <Typography color="text.secondary" sx={{ fontSize: { xs: '0.9rem', sm: '1rem' } }}>
                 아직 모니터링 중인 게임이 없습니다.
               </Typography>
@@ -825,7 +837,8 @@ export default function Home() {
                       width: '100%',
                       '&:hover': { boxShadow: 6 },
                       transition: 'box-shadow 0.3s',
-                      borderRadius: { xs: 2, sm: 1 }
+                      borderRadius: { xs: 2, sm: 1 },
+                      boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
                     }}
                   >
                     <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
