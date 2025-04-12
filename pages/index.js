@@ -779,7 +779,7 @@ export default function Home() {
                 type="submit" 
                 variant="contained" 
                 color="primary" 
-                disabled={loading || cloudSaving}
+                disabled={loading}
                 startIcon={loading ? <CircularProgress size={20} /> : <AddIcon />}
                 sx={{ 
                   mt: { xs: 1, sm: 0 },
