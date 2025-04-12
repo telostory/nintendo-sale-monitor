@@ -746,15 +746,16 @@ export default function Home() {
                     elevation={1} 
                     sx={{ 
                       width: '100%',
-                      '&:hover': { boxShadow: 3 },
+                      '&:hover': { boxShadow: 3, cursor: 'pointer' },
                       transition: 'box-shadow 0.3s',
                       borderRadius: 1,
                       boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
                     }}
+                    onClick={() => window.open(game.url, '_blank', 'noopener,noreferrer')}
                   >
                     <Box sx={{ p: { xs: 2, sm: 3 } }}>
                       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, width: '100%' }}>
-                        <Box sx={{ flexGrow: 1, width: { xs: '100%', sm: 'calc(100% - 140px)' }, mb: { xs: 2, sm: 0 } }}>
+                        <Box sx={{ flexGrow: 1, width: { xs: '100%', sm: 'calc(100% - 60px)' }, mb: { xs: 2, sm: 0 } }}>
                           <Typography 
                             variant="h6" 
                             component="h3" 
@@ -828,8 +829,8 @@ export default function Home() {
                           flexDirection: 'row',
                           justifyContent: { xs: 'flex-start', sm: 'flex-end' },
                           alignItems: 'center',
-                          width: { xs: '100%', sm: '140px' },
-                          minWidth: { sm: '140px' },
+                          width: { xs: '100%', sm: '60px' },
+                          minWidth: { sm: '60px' },
                           flexShrink: 0,
                           mt: { xs: 1, sm: 0 }
                         }}>
@@ -838,41 +839,6 @@ export default function Home() {
                             gap: 1,
                             justifyContent: { xs: 'flex-start', sm: 'flex-end' }
                           }}>
-                            <IconButton 
-                              color="primary"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleGameSelect(game);
-                              }}
-                              size="small"
-                              title="가격 추이 보기"
-                            >
-                              <TimelineIcon />
-                            </IconButton>
-                            <IconButton 
-                              component="a"
-                              href={game.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              color="primary"
-                              size="small"
-                              title="스토어에서 보기"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <LaunchIcon />
-                            </IconButton>
-                            <IconButton 
-                              color="primary"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                refreshGame(game.id);
-                              }}
-                              size="small"
-                              disabled={refreshing}
-                              title="가격 갱신"
-                            >
-                              <RefreshIcon />
-                            </IconButton>
                             <IconButton 
                               color="error"
                               onClick={(e) => {
