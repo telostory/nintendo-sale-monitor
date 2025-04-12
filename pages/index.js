@@ -533,10 +533,40 @@ export default function Home() {
         return;
       }
       
-      // URL 정리 (쿼리 파라미터 제거)
-      const cleanUrl = url.split('?')[0];
+      // URL 정규화: 프로토콜 표준화, 쿼리 파라미터 제거, 트레일링 슬래시 제거
+      let cleanUrl = url.trim().split('?')[0].replace(/\/$/, '');
       
-      console.log('게임 추가 시작:', cleanUrl);
+      // URL에서 'https://' 부분을 표준화
+      if (cleanUrl.startsWith('http://')) {
+        cleanUrl = cleanUrl.replace('http://', 'https://');
+      } else if (!cleanUrl.startsWith('https://')) {
+        cleanUrl = 'https://' + cleanUrl;
+      }
+      
+      console.log('정규화된 URL:', cleanUrl);
+      
+      // 닌텐도 URL 형식 확인 및 보정
+      let validNintendoUrl = cleanUrl;
+      
+      try {
+        const urlObj = new URL(cleanUrl);
+        // 닌텐도 스토어 도메인 확인
+        const isNintendoDomain = urlObj.hostname.includes('nintendo.co.kr') || 
+                                 urlObj.hostname.includes('nintendo.com');
+        
+        if (!isNintendoDomain) {
+          setError('닌텐도 스토어 게임 URL을 입력해주세요.');
+          setAddGameLoading(false);
+          return;
+        }
+      } catch (urlError) {
+        console.error('URL 파싱 오류:', urlError);
+        setError('유효한 URL을 입력해주세요.');
+        setAddGameLoading(false);
+        return;
+      }
+      
+      console.log('게임 추가 시작:', validNintendoUrl);
       
       // 게임 정보 가져오기
       const response = await fetch('/api/game-info', {
@@ -544,7 +574,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: cleanUrl }),
+        body: JSON.stringify({ url: validNintendoUrl }),
       });
       
       const responseClone = response.clone();
@@ -584,7 +614,7 @@ export default function Home() {
       };
       
       const newGame = {
-        url: cleanUrl,
+        url: validNintendoUrl,
         title: data.title,
         price: priceText,                 // price 필드 사용 - 서버 모델과 일치
         priceHistory: [priceRecord],
@@ -619,11 +649,28 @@ export default function Home() {
         }
         
         if (!serverResponse.ok) {
-          // 중복 키 오류는 무시 - 이미 저장된 게임으로 간주
-          if (serverData.error && serverData.error.includes('duplicate key error')) {
+          // 중복 키 오류 분석
+          if (serverData.error === 'duplicate_key') {
             console.log('중복된 게임 - 이미 등록된 게임으로 간주');
-            setSnackbarMessage('이미 등록된 게임입니다.');
+            
+            // 중복 키 상세 정보 분석
+            const details = serverData.details || {};
+            console.log('중복 키 세부정보:', JSON.stringify(details, null, 2));
+            
+            // 중복된 URL 표시
+            const duplicateUrl = details.keyValue?.url || validNintendoUrl;
+            const shortUrl = duplicateUrl.split('/').pop();
+            
+            setSnackbarMessage(`이미 등록된 게임입니다 (ID: ${shortUrl}). 새로고침 후 확인하세요.`);
             setSnackbarOpen(true);
+            
+            try {
+              // 게임 목록 새로고침
+              await fetchUserGames();
+            } catch (refreshErr) {
+              console.error('게임 목록 새로고침 실패:', refreshErr);
+            }
+            
             setUrl('');
             setAddGameLoading(false);
             return;
@@ -899,6 +946,46 @@ export default function Home() {
         </Box>
       </Paper>
     );
+  };
+
+  // DB 일관성 검사 및 복구 함수
+  const validateDatabase = async () => {
+    if (!session || !session.user) {
+      setSnackbarMessage('로그인 후 사용할 수 있는 기능입니다.');
+      setSnackbarOpen(true);
+      return;
+    }
+    
+    try {
+      setFetchLoading(true);
+      
+      const response = await fetch('/api/user-games', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'validate' }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('데이터베이스 일관성 검사 중 오류가 발생했습니다.');
+      }
+      
+      const data = await response.json();
+      
+      setSnackbarMessage(`DB 검사 완료: 총 ${data.data.totalGames}개 게임, ${data.data.duplicates}개 중복 항목 발견`);
+      setSnackbarOpen(true);
+      
+      // 게임 목록 새로고침
+      await fetchUserGames();
+      
+    } catch (error) {
+      console.error('DB 일관성 검사 오류:', error);
+      setError(error.message);
+    } finally {
+      setFetchLoading(false);
+    }
   };
 
   return (
