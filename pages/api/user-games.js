@@ -82,7 +82,9 @@ export default async function handler(req, res) {
     case 'POST':
       // 새 게임 추가
       try {
-        const { url, title, price, priceHistory } = req.body;
+        // URL과 필수 필드 검증
+        const { url, title, price } = req.body;
+        console.log('POST 요청 받음:', JSON.stringify(req.body, null, 2));
         
         if (!url || !title || !price) {
           return res.status(400).json({ 
@@ -91,83 +93,55 @@ export default async function handler(req, res) {
           });
         }
         
-        // URL 정리 (쿼리 파라미터 제거)
-        const cleanUrl = url.split('?')[0];
+        // URL 정리 (쿼리 파라미터와 트레일링 슬래시 제거)
+        const cleanUrl = url.split('?')[0].replace(/\/$/, '');
         
-        // MongoDB 모델을 직접 사용하여 게임 추가
         try {
-          // 기존 게임 찾기
-          const existingGame = await Game.findOne({ 
-            userId: userId, 
-            url: cleanUrl 
+          // 중복 게임 확인
+          const existingGame = await Game.findOne({
+            userId,
+            url: cleanUrl
           });
           
           if (existingGame) {
-            // 이미 있는 게임이면 업데이트
-            console.log('기존 게임 업데이트:', existingGame._id);
-            
-            // 가격 이력이 있으면 추가
-            if (priceHistory && priceHistory.length > 0) {
-              // 기존 날짜 목록 확인
-              const existingDates = existingGame.priceHistory.map(record => record.date);
-              
-              // 새 가격 기록 중 중복되지 않은 것만 추가
-              for (const record of priceHistory) {
-                if (!existingDates.includes(record.date)) {
-                  existingGame.priceHistory.push(record);
-                }
-              }
-              
-              // 날짜순 정렬
-              existingGame.priceHistory.sort((a, b) => 
-                new Date(a.date) - new Date(b.date)
-              );
-            }
-            
-            // 필드 업데이트
-            existingGame.title = title;
-            existingGame.price = price;
-            existingGame.lastUpdated = new Date();
-            
-            // 저장
-            await existingGame.save();
-            
+            console.log('이미 존재하는 게임:', existingGame._id);
             return res.status(200).json({
               success: true,
-              message: '게임 정보가 업데이트되었습니다.',
+              message: '이미 등록된 게임입니다.',
               data: existingGame
             });
-            
-          } else {
-            // 새 게임 추가
-            console.log('새 게임 추가:', cleanUrl);
-            
-            const newGame = new Game({
-              userId,
-              url: cleanUrl,
-              title,
-              price,
-              priceHistory: priceHistory || [],
-              lastUpdated: new Date()
-            });
-            
-            const savedGame = await newGame.save();
-            
-            return res.status(201).json({
-              success: true,
-              message: '새 게임이 추가되었습니다.',
-              data: savedGame
-            });
           }
-        } catch (error) {
-          // MongoDB 중복 키 오류 처리
-          if (error.code === 11000) {
-            console.error('MongoDB 중복 키 오류:', error);
+          
+          // 새 게임 생성
+          const newGame = new Game({
+            userId,
+            url: cleanUrl,
+            title,
+            price,
+            priceHistory: req.body.priceHistory || [],
+            lastUpdated: new Date()
+          });
+          
+          // 게임 저장
+          await newGame.save();
+          console.log('새 게임 추가 성공:', newGame._id);
+          
+          // 성공 응답
+          return res.status(201).json({
+            success: true,
+            message: '게임이 성공적으로 추가되었습니다.',
+            data: newGame
+          });
+          
+        } catch (dbError) {
+          // 중복 키 오류 특별 처리
+          if (dbError.code === 11000) {
+            console.log('MongoDB 중복 키 오류:', dbError);
             
-            // 다시 한번 이 URL의 게임이 있는지 확인
-            const existingGame = await Game.findOne({ 
-              userId: userId, 
-              url: cleanUrl 
+            // 다시 한번 확인 (레이스 컨디션 대응)
+            const existingGame = await Game.findOne({
+              userId,
+              url: cleanUrl
             });
             
             if (existingGame) {
@@ -176,24 +150,30 @@ export default async function handler(req, res) {
                 message: '이미 존재하는 게임입니다.',
                 data: existingGame
               });
-            } else {
-              return res.status(400).json({
-                success: false,
-                message: '중복된 게임을 추가할 수 없습니다.',
-                error: error.message
-              });
             }
+            
+            return res.status(400).json({
+              success: false,
+              message: '이미 등록된 게임입니다.',
+              error: 'duplicate_key'
+            });
           }
           
-          // 그 외 다른 오류
-          throw error;
+          // 그 외 DB 오류
+          console.error('DB 오류:', dbError);
+          return res.status(500).json({
+            success: false,
+            message: '데이터베이스 오류가 발생했습니다.',
+            error: dbError.message
+          });
         }
+        
       } catch (error) {
-        console.error('게임 추가 오류:', error);
-        return res.status(500).json({ 
-          success: false, 
-          message: '게임을 추가하는 중 오류가 발생했습니다.', 
-          error: error.message 
+        console.error('게임 추가 처리 오류:', error);
+        return res.status(500).json({
+          success: false,
+          message: '게임을 추가하는 중 오류가 발생했습니다.',
+          error: error.message
         });
       }
       

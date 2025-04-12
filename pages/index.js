@@ -518,107 +518,48 @@ export default function Home() {
     }
   }, [games.length]);
 
-  // 서버에 게임 추가
-  const addGameToServer = async (gameData) => {
-    console.log('서버에 게임 추가 시도:', JSON.stringify(gameData, null, 2));
-    
-    try {
-      const response = await fetch('/api/user-games', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // 쿠키 포함
-        body: JSON.stringify(gameData),
-      });
-      
-      console.log('서버 응답 상태코드:', response.status);
-      
-      // 응답을 복제하여 두 번 읽을 수 있도록 함
-      const responseClone = response.clone();
-      
-      if (!response.ok) {
-        let errorMessage = '게임을 추가하는 중 오류가 발생했습니다.';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-          console.error('서버 오류 응답:', errorData);
-        } catch (parseError) {
-          // JSON 파싱 실패 시 텍스트로 읽기 시도
-          const errorText = await responseClone.text();
-          console.error('서버 오류 응답 (텍스트):', errorText);
-        }
-        throw new Error(errorMessage);
-      }
-      
-      const data = await response.json();
-      console.log('게임 추가 성공 응답:', data);
-      
-      // 성공적으로 추가된 게임으로 상태 업데이트
-      if (data.success && data.data) {
-        setGames(prevGames => [data.data, ...prevGames]);
-        setSnackbarMessage('게임이 성공적으로 추가되었습니다.');
-        setSnackbarOpen(true);
-      }
-    } catch (error) {
-      console.error('게임 추가 API 요청 오류:', error);
-      setSnackbarMessage(error.message || '게임을 추가하는 중 오류가 발생했습니다.');
-      setSnackbarOpen(true);
-      
-      // 서버 저장에 실패했지만 UI에 임시로 표시
-      setGames(prevGames => [gameData, ...prevGames]);
-    }
-  };
-
+  // 게임 추가 처리 함수
   const handleAddGame = async () => {
-    if (!url) {
-      // 에러 상태를 TextField에 표시하는 대신 스낵바로 표시
-      setSnackbarMessage('닌텐도 스토어 URL을 입력해주세요.');
-      setSnackbarOpen(true);
-      return;
-    }
-    
-    if (!url.includes('nintendo.co.kr') && !url.includes('nintendo.com')) {
-      // 에러 상태를 TextField에 표시하는 대신 스낵바로 표시
-      setSnackbarMessage('유효한 닌텐도 스토어 URL이 아닙니다. 닌텐도 스토어의 디지털 상품 URL만 입력 가능합니다.');
-      setSnackbarOpen(true);
-      return;
-    }
+    if (addGameLoading) return; // 이미 처리 중이면 중복 요청 방지
     
     setAddGameLoading(true);
     setError('');
     
     try {
-      console.log('게임 정보 가져오기 요청 시작:', url);
+      // URL 입력 확인
+      if (!url.trim()) {
+        setError('닌텐도 스토어 게임 URL을 입력해주세요.');
+        setAddGameLoading(false);
+        return;
+      }
       
+      // URL 정리 (쿼리 파라미터 제거)
+      const cleanUrl = url.split('?')[0];
+      
+      console.log('게임 추가 시작:', cleanUrl);
+      
+      // 게임 정보 가져오기
       const response = await fetch('/api/game-info', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: cleanUrl }),
       });
       
-      console.log('게임 정보 응답 상태:', response.status);
-      
-      // 응답을 복제하여 오류 시 텍스트로도 읽을 수 있게 함
       const responseClone = response.clone();
       let data;
       
       try {
         data = await response.json();
-        console.log('게임 정보 응답 데이터:', data);
+        console.log('게임 정보 응답:', data);
       } catch (jsonError) {
         const text = await responseClone.text();
-        console.error('JSON 파싱 오류, 원시 응답:', text);
+        console.error('JSON 파싱 오류:', text);
         throw new Error('서버 응답을 처리할 수 없습니다.');
       }
       
       if (!response.ok) {
-        // 게임을 찾을 수 없는 경우 특별 메시지 추가
-        if (data.message && data.message.includes('찾을 수 없습니다')) {
-          throw new Error('닌텐도 스토어의 디지털 상품 URL만 입력 가능합니다. 물리적 상품이나 존재하지 않는 게임은 추적할 수 없습니다.');
-        }
         throw new Error(data.message || '게임 정보를 가져오는데 실패했습니다.');
       }
       
@@ -627,50 +568,109 @@ export default function Home() {
       const koreaTime = new Date(currentDate.getTime() + (9 * 60 * 60 * 1000));
       const today = koreaTime.toISOString().split('T')[0];
       
-      console.log('가격 추출 전:', data.price);
       // 가격에서 숫자만 추출
-      const priceNumber = parseInt(data.price.replace(/[^\d]/g, ''));
-      console.log('추출된 가격 숫자:', priceNumber);
+      const priceText = data.price;
+      const priceNumber = parseInt(priceText.replace(/[^\d]/g, ''));
       
       if (isNaN(priceNumber)) {
-        throw new Error('가격 정보를 올바르게 추출할 수 없습니다. 다른 게임 URL을 시도해보세요.');
+        throw new Error('가격 정보를 올바르게 추출할 수 없습니다.');
       }
       
+      // 서버에 저장할 가격 기록 객체 생성
+      const priceRecord = {
+        date: today,
+        price: priceNumber,
+        priceFormatted: priceText
+      };
+      
       const newGame = {
-        id: Date.now().toString(),
-        url,
+        url: cleanUrl,
         title: data.title,
-        price: data.price,
-        priceHistory: [
-          { 
-            date: today, 
-            price: priceNumber, 
-            priceFormatted: data.price 
-          }
-        ],
+        price: priceText,                 // price 필드 사용 - 서버 모델과 일치
+        priceHistory: [priceRecord],
         lastUpdated: new Date().toISOString()
       };
       
-      console.log('추가할 게임 정보:', JSON.stringify(newGame, null, 2));
+      console.log('서버에 저장할 게임 데이터:', JSON.stringify(newGame, null, 2));
       
       if (session && session.user) {
         // 로그인된 경우: 서버에 게임 추가
-        await addGameToServer(newGame);
+        console.log('로그인 상태로 서버에 게임 추가');
+        
+        const serverResponse = await fetch('/api/user-games', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // 쿠키 포함
+          body: JSON.stringify(newGame),
+        });
+        
+        const serverResponseClone = serverResponse.clone();
+        let serverData;
+        
+        try {
+          serverData = await serverResponse.json();
+          console.log('서버 저장 응답:', serverData);
+        } catch (jsonError) {
+          const text = await serverResponseClone.text();
+          console.error('서버 응답 파싱 오류:', text);
+          throw new Error('서버 응답을 처리할 수 없습니다.');
+        }
+        
+        if (!serverResponse.ok) {
+          // 중복 키 오류는 무시 - 이미 저장된 게임으로 간주
+          if (serverData.error && serverData.error.includes('duplicate key error')) {
+            console.log('중복된 게임 - 이미 등록된 게임으로 간주');
+            setSnackbarMessage('이미 등록된 게임입니다.');
+            setSnackbarOpen(true);
+            setUrl('');
+            setAddGameLoading(false);
+            return;
+          }
+          
+          throw new Error(serverData.message || '서버에 게임을 저장하는데 실패했습니다.');
+        }
+        
+        // 성공 응답에서 저장된 게임 정보 가져오기
+        if (serverData.success && serverData.data) {
+          // 서버에서 반환한 데이터로 게임 상태 업데이트
+          setGames(prevGames => [serverData.data, ...prevGames]);
+        } else {
+          // 서버 응답에 데이터가 없는 경우 - 클라이언트 데이터로 UI 업데이트
+          setGames(prevGames => [
+            {
+              ...newGame,
+              id: Date.now().toString() // 임시 ID
+            },
+            ...prevGames
+          ]);
+        }
+        
       } else {
-        // 로그인되지 않은 경우: 로컬 상태에만 추가
-        setGames(prevGames => [newGame, ...prevGames]);
-        setSnackbarMessage('게임이 추가되었습니다.');
-        setSnackbarOpen(true);
+        // 로그인되지 않은 경우: 로컬 스토리지에만 추가
+        console.log('비로그인 상태로 로컬 스토리지에 게임 추가');
+        
+        const gameWithId = {
+          ...newGame,
+          id: Date.now().toString() // 로컬 스토리지용 임시 ID
+        };
+        
+        setGames(prevGames => [gameWithId, ...prevGames]);
+        
+        // 로컬 스토리지 업데이트
+        const updatedGames = [gameWithId, ...games];
+        localStorage.setItem('monitoredGames', JSON.stringify(updatedGames));
       }
       
+      // 입력 필드 초기화
       setUrl('');
-      setLastRefreshed(new Date());
+      setSnackbarMessage('게임이 추가되었습니다.');
+      setSnackbarOpen(true);
       
     } catch (error) {
       console.error('게임 추가 오류:', error);
-      // 에러 상태를 TextField가 아닌 스낵바에 표시
-      setSnackbarMessage(error.message || '게임을 추가하는 중 오류가 발생했습니다.');
-      setSnackbarOpen(true);
+      setError(error.message || '게임을 추가하는 중 오류가 발생했습니다.');
     } finally {
       setAddGameLoading(false);
     }
