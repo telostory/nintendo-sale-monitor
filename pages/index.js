@@ -528,7 +528,7 @@ export default function Home() {
     
     if (!url.includes('nintendo.co.kr') && !url.includes('nintendo.com')) {
       // 에러 상태를 TextField에 표시하는 대신 스낵바로 표시
-      setSnackbarMessage('유효한 닌텐도 스토어 URL이 아닙니다.');
+      setSnackbarMessage('유효한 닌텐도 스토어 URL이 아닙니다. 닌텐도 스토어의 디지털 상품 URL만 입력 가능합니다.');
       setSnackbarOpen(true);
       return;
     }
@@ -548,6 +548,10 @@ export default function Home() {
       const data = await response.json();
       
       if (!response.ok) {
+        // 게임을 찾을 수 없는 경우 특별 메시지 추가
+        if (data.message && data.message.includes('찾을 수 없습니다')) {
+          throw new Error('닌텐도 스토어의 디지털 상품 URL만 입력 가능합니다. 물리적 상품이나 존재하지 않는 게임은 추적할 수 없습니다.');
+        }
         throw new Error(data.message || '게임 정보를 가져오는데 실패했습니다.');
       }
       
@@ -898,9 +902,6 @@ export default function Home() {
         </AppBar>
 
         <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4, position: 'relative' }}>
-          <Typography variant="h5" component="h1" gutterBottom sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }}>
-            닌텐도 게임 가격 모니터
-          </Typography>
           <form onSubmit={e => { e.preventDefault(); handleAddGame(); }}>
             <Box sx={{ 
               display: 'flex', 
