@@ -527,7 +527,11 @@ export default function Home() {
 
   return (
     <ThemeProvider theme={theme}>
-      <Container maxWidth="md" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1.5, sm: 3 } }}>
+      <Container maxWidth="md" sx={{ 
+        py: { xs: 2, sm: 4 }, 
+        px: { xs: 2, sm: 3 },
+        overflow: 'hidden'  // 컨테이너 넘치는 요소 방지
+      }}>
         <Head>
           <title>닌텐도 게임 가격 모니터</title>
           <meta name="description" content="닌텐도 게임 가격을 모니터링하고 가격 변동을 추적하는 도구입니다." />
@@ -545,7 +549,12 @@ export default function Home() {
             boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
           }}
         >
-          <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 1, sm: 2 } }}>
+          <Toolbar sx={{ 
+            justifyContent: 'space-between', 
+            px: { xs: 1, sm: 2 },
+            py: { xs: 0.5, sm: 0 },
+            minHeight: { xs: '56px', sm: '64px' }
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <StorefrontIcon sx={{ mr: 1 }} />
               <Typography variant="h6" component="div" sx={{ fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
@@ -626,7 +635,7 @@ export default function Home() {
           </Toolbar>
         </AppBar>
 
-        <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4 }}>
+        <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 4, position: 'relative' }}>
           <Typography variant="h5" component="h1" gutterBottom sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }}>
             닌텐도 게임 가격 모니터
           </Typography>
@@ -635,7 +644,8 @@ export default function Home() {
               display: 'flex', 
               flexDirection: { xs: 'column', sm: 'row' },
               alignItems: 'flex-start', 
-              gap: { xs: 1.5, sm: 2 } 
+              gap: { xs: 1.5, sm: 2 },
+              width: '100%'
             }}>
               <TextField
                 label="닌텐도 스토어 게임 URL"
@@ -647,8 +657,8 @@ export default function Home() {
                 fullWidth
                 placeholder="https://store.nintendo.co.kr/games/..."
                 sx={{
-                  minWidth: '100%',
                   flex: 1,
+                  width: '100%',
                   '& .MuiInputBase-input': {
                     fontSize: { xs: '0.9rem', sm: '1rem' },
                   }
@@ -664,7 +674,8 @@ export default function Home() {
                   mt: { xs: 1, sm: 0 },
                   height: { xs: '40px', sm: '56px' },
                   alignSelf: { xs: 'flex-start', sm: 'center' },
-                  minWidth: { xs: '100%', sm: '120px' }
+                  width: { xs: '100%', sm: '120px' },
+                  boxSizing: 'border-box'
                 }}
               >
                 게임 추가
