@@ -27,17 +27,21 @@ export const authOptions = {
     async session({ session, token }) {
       // 세션에 사용자 정보 추가
       console.log("==== SESSION CALLBACK TRIGGERED ====");
-      console.log("Token:", token);
-      console.log("Original session:", session);
+      console.log("Token:", JSON.stringify(token, null, 2));
+      console.log("Original session:", JSON.stringify(session, null, 2));
       
-      if (token && token.sub) {
+      // token.sub를 사용하는 대신 token.userId가 있으면 그것을 사용
+      if (token.userId) {
+        session.user.id = token.userId;
+        console.log("User ID added to session from token.userId:", token.userId);
+      } else if (token.sub) {
         session.user.id = token.sub;
-        console.log("User ID added to session:", token.sub);
+        console.log("User ID added to session from token.sub:", token.sub);
       } else {
-        console.error("토큰에 sub 필드가 없습니다:", token);
+        console.error("토큰에 사용자 ID가 없습니다:", token);
       }
       
-      console.log("Updated session:", session);
+      console.log("Updated session:", JSON.stringify(session, null, 2));
       return session;
     },
     async redirect({ url, baseUrl }) {
@@ -60,13 +64,17 @@ export const authOptions = {
     },
     async jwt({ token, user, account, profile }) {
       console.log("==== JWT CALLBACK TRIGGERED ====");
-      console.log("Token before update:", token);
-      console.log("User info:", user);
+      console.log("Token before update:", JSON.stringify(token, null, 2));
+      console.log("User info:", user ? JSON.stringify(user, null, 2) : "없음");
       
       if (user) {
         // 최초 로그인 시 user 객체가 전달됨
-        token.userId = user.id;
-        console.log("User ID added to token:", user.id);
+        // 사용자 ID를 sub와 userId 두 곳에 모두 저장
+        token.userId = user.id || user.sub;
+        if (!token.sub && user.id) {
+          token.sub = user.id;
+        }
+        console.log("User ID added to token:", token.userId);
       }
       
       if (account) {
@@ -74,7 +82,7 @@ export const authOptions = {
         console.log("Access token added to JWT");
       }
       
-      console.log("Updated token:", token);
+      console.log("Updated token:", JSON.stringify(token, null, 2));
       return token;
     }
   },

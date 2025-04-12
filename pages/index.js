@@ -130,20 +130,29 @@ export default function Home() {
 
   // 서버에서 사용자의 게임 목록 가져오기
   const fetchUserGames = async () => {
-    if (!session || !session.user) {
+    if (!session) {
       console.log('로그인되지 않은 상태:', session);
       return;
     }
     
-    if (!session.user.id) {
-      console.error('세션에 사용자 ID가 없습니다:', session);
+    if (!session.user) {
+      console.log('세션에 사용자 정보 없음:', session);
+      return;
+    }
+    
+    // userId가 어느 필드에 있는지 확인
+    const userId = session.user.id || session.user.sub;
+    
+    if (!userId) {
+      console.error('세션에 사용자 ID가 없습니다:', session.user);
       setSnackbarMessage('로그인 정보가 올바르지 않습니다. 다시 로그인해주세요.');
       setSnackbarOpen(true);
       signOut({ redirect: false }); // 세션이 불완전한 경우 로그아웃 처리
       return;
     }
     
-    console.log('사용자 게임 목록 요청 시작:', session.user.id);
+    console.log('사용자 게임 목록 요청 시작. 사용자 ID:', userId);
+    console.log('세션 정보:', JSON.stringify(session, null, 2));
     
     try {
       setLoading(true);
@@ -159,8 +168,16 @@ export default function Home() {
       console.log('API 응답 상태코드:', response.status);
       
       if (response.status === 401) {
+        console.log('사용자 인증 실패 (401)');
+        
+        // 세션 정보와 응답 헤더 로깅
+        console.log('현재 세션:', JSON.stringify(session, null, 2));
+        
+        const responseClone = response.clone();
+        const errorText = await responseClone.text();
+        console.log('401 응답 내용:', errorText);
+        
         // 인증 오류는 조용히 처리 (사용자가 새로 로그인한 경우 정상적인 상황)
-        console.log('사용자 인증이 필요합니다. 다시 로그인해주세요.');
         setSnackbarMessage('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
         setSnackbarOpen(true);
         signOut({ redirect: false }); // 세션이 만료된 경우 로그아웃 처리
@@ -168,13 +185,19 @@ export default function Home() {
       }
       
       if (!response.ok) {
+        console.log('API 오류 응답:', response.status);
+        
+        const responseClone = response.clone();
+        const errorText = await responseClone.text();
+        console.log('오류 응답 내용:', errorText);
+        
         // 401 이외의 오류는 스낵바로 표시 (입력 폼 에러 대신)
         const errorData = await response.json();
         throw new Error(errorData.message || '서버에서 게임 목록을 가져오는데 실패했습니다.');
       }
       
       const data = await response.json();
-      console.log('API 응답 데이터:', data);
+      console.log('API 응답 데이터:', JSON.stringify(data, null, 2));
       
       if (data.success && data.data) {
         setGames(data.data);
@@ -191,6 +214,8 @@ export default function Home() {
             console.log('마지막 업데이트 시간 설정:', new Date(latestUpdate));
           }
         }
+      } else {
+        console.log('서버에서 받은 데이터가 유효하지 않습니다:', data);
       }
     } catch (error) {
       console.error('게임 목록 불러오기 오류:', error);

@@ -1,16 +1,25 @@
+import { getServerSession } from 'next-auth';
 import { getSession } from 'next-auth/react';
+import { authOptions } from './auth/[...nextauth]';
 import dbConnect from '../../lib/mongoose';
 import Game from '../../models/Game';
 
 export default async function handler(req, res) {
   // 디버깅을 위한 요청 정보 로깅
   console.log(`==== API 요청: ${req.method} /api/user-games ====`);
-  console.log('Headers:', req.headers);
-  console.log('Cookies:', req.cookies);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Cookies:', JSON.stringify(req.cookies, null, 2));
   
-  // 1. 사용자 인증 확인
-  const session = await getSession({ req });
-  console.log('세션 정보:', session);
+  // 두 가지 방법으로 세션 확인 - getServerSession과 getSession 비교
+  const serverSession = await getServerSession(req, res, authOptions);
+  console.log('getServerSession 결과:', JSON.stringify(serverSession, null, 2));
+  
+  const clientSession = await getSession({ req });
+  console.log('getSession 결과:', JSON.stringify(clientSession, null, 2));
+  
+  // 서버 세션 우선 사용, 없으면 클라이언트 세션 사용
+  const session = serverSession || clientSession;
+  console.log('최종 사용 세션:', JSON.stringify(session, null, 2));
   
   if (!session) {
     console.error('세션이 없음: 인증되지 않은 요청');
@@ -22,12 +31,19 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, message: '세션에 사용자 정보가 없습니다. 다시 로그인해주세요.' });
   }
   
-  if (!session.user.id) {
-    console.error('세션에 사용자 ID 없음:', session.user);
+  // userId가 sub 또는 id 중 어느 쪽에 있는지 확인
+  let userId;
+  if (session.user.id) {
+    userId = session.user.id;
+    console.log('session.user.id에서 사용자 ID 사용:', userId);
+  } else if (session.user.sub) {
+    userId = session.user.sub;
+    console.log('session.user.sub에서 사용자 ID 사용:', userId);
+  } else {
+    console.error('세션에 사용자 ID가 없음:', session.user);
     return res.status(401).json({ success: false, message: '사용자 식별 정보가 누락되었습니다. 다시 로그인해주세요.' });
   }
   
-  const userId = session.user.id; // 사용자 고유 ID
   console.log('인증된 사용자 ID:', userId);
   
   // 2. 데이터베이스 연결
