@@ -130,7 +130,20 @@ export default function Home() {
 
   // 서버에서 사용자의 게임 목록 가져오기
   const fetchUserGames = async () => {
-    if (!session || !session.user) return;
+    if (!session || !session.user) {
+      console.log('로그인되지 않은 상태:', session);
+      return;
+    }
+    
+    if (!session.user.id) {
+      console.error('세션에 사용자 ID가 없습니다:', session);
+      setSnackbarMessage('로그인 정보가 올바르지 않습니다. 다시 로그인해주세요.');
+      setSnackbarOpen(true);
+      signOut({ redirect: false }); // 세션이 불완전한 경우 로그아웃 처리
+      return;
+    }
+    
+    console.log('사용자 게임 목록 요청 시작:', session.user.id);
     
     try {
       setLoading(true);
@@ -140,24 +153,33 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // 쿠키 포함하여 요청
       });
+      
+      console.log('API 응답 상태코드:', response.status);
       
       if (response.status === 401) {
         // 인증 오류는 조용히 처리 (사용자가 새로 로그인한 경우 정상적인 상황)
         console.log('사용자 인증이 필요합니다. 다시 로그인해주세요.');
+        setSnackbarMessage('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+        setSnackbarOpen(true);
         signOut({ redirect: false }); // 세션이 만료된 경우 로그아웃 처리
         return;
       }
       
       if (!response.ok) {
         // 401 이외의 오류는 스낵바로 표시 (입력 폼 에러 대신)
-        throw new Error('서버에서 게임 목록을 가져오는데 실패했습니다.');
+        const errorData = await response.json();
+        throw new Error(errorData.message || '서버에서 게임 목록을 가져오는데 실패했습니다.');
       }
       
       const data = await response.json();
+      console.log('API 응답 데이터:', data);
       
       if (data.success && data.data) {
         setGames(data.data);
+        console.log('게임 목록 설정 완료:', data.data.length);
+        
         // 서버에서 가져온 데이터의 마지막 업데이트 시간 설정
         if (data.data.length > 0) {
           const latestUpdate = Math.max(...data.data.map(game => 
@@ -166,13 +188,14 @@ export default function Home() {
           
           if (latestUpdate > 0) {
             setLastRefreshed(new Date(latestUpdate));
+            console.log('마지막 업데이트 시간 설정:', new Date(latestUpdate));
           }
         }
       }
     } catch (error) {
       console.error('게임 목록 불러오기 오류:', error);
       // 에러 상태를 TextField가 아닌 스낵바에 표시
-      setSnackbarMessage('게임 목록을 불러오는데 문제가 발생했습니다.');
+      setSnackbarMessage(error.message || '게임 목록을 불러오는데 문제가 발생했습니다.');
       setSnackbarOpen(true);
     } finally {
       setLoading(false);

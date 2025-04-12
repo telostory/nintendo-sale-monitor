@@ -28,7 +28,16 @@ export const authOptions = {
       // 세션에 사용자 정보 추가
       console.log("==== SESSION CALLBACK TRIGGERED ====");
       console.log("Token:", token);
-      session.user.id = token.sub;
+      console.log("Original session:", session);
+      
+      if (token && token.sub) {
+        session.user.id = token.sub;
+        console.log("User ID added to session:", token.sub);
+      } else {
+        console.error("토큰에 sub 필드가 없습니다:", token);
+      }
+      
+      console.log("Updated session:", session);
       return session;
     },
     async redirect({ url, baseUrl }) {
@@ -51,10 +60,21 @@ export const authOptions = {
     },
     async jwt({ token, user, account, profile }) {
       console.log("==== JWT CALLBACK TRIGGERED ====");
+      console.log("Token before update:", token);
+      console.log("User info:", user);
+      
+      if (user) {
+        // 최초 로그인 시 user 객체가 전달됨
+        token.userId = user.id;
+        console.log("User ID added to token:", user.id);
+      }
+      
       if (account) {
         token.accessToken = account.access_token;
         console.log("Access token added to JWT");
       }
+      
+      console.log("Updated token:", token);
       return token;
     }
   },

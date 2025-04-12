@@ -3,24 +3,54 @@ import dbConnect from '../../lib/mongoose';
 import Game from '../../models/Game';
 
 export default async function handler(req, res) {
+  // 디버깅을 위한 요청 정보 로깅
+  console.log(`==== API 요청: ${req.method} /api/user-games ====`);
+  console.log('Headers:', req.headers);
+  console.log('Cookies:', req.cookies);
+  
   // 1. 사용자 인증 확인
   const session = await getSession({ req });
+  console.log('세션 정보:', session);
   
-  if (!session || !session.user) {
+  if (!session) {
+    console.error('세션이 없음: 인증되지 않은 요청');
     return res.status(401).json({ success: false, message: '인증되지 않은 요청입니다. 로그인이 필요합니다.' });
   }
   
+  if (!session.user) {
+    console.error('세션에 사용자 정보 없음');
+    return res.status(401).json({ success: false, message: '세션에 사용자 정보가 없습니다. 다시 로그인해주세요.' });
+  }
+  
+  if (!session.user.id) {
+    console.error('세션에 사용자 ID 없음:', session.user);
+    return res.status(401).json({ success: false, message: '사용자 식별 정보가 누락되었습니다. 다시 로그인해주세요.' });
+  }
+  
   const userId = session.user.id; // 사용자 고유 ID
+  console.log('인증된 사용자 ID:', userId);
   
   // 2. 데이터베이스 연결
-  await dbConnect();
+  try {
+    await dbConnect();
+    console.log('데이터베이스 연결 성공');
+  } catch (dbError) {
+    console.error('데이터베이스 연결 실패:', dbError);
+    return res.status(500).json({
+      success: false,
+      message: '데이터베이스 연결 오류가 발생했습니다.',
+      error: dbError.message
+    });
+  }
   
   // 3. HTTP 메서드에 따라 처리
   switch (req.method) {
     case 'GET':
       // 사용자의 게임 목록 조회
       try {
+        console.log(`사용자 ${userId}의 게임 목록 조회 시작`);
         const games = await Game.find({ userId }).sort({ createdAt: -1 }); // 최신순 정렬
+        console.log(`게임 목록 조회 결과: ${games.length}개 항목`);
         return res.status(200).json({
           success: true, 
           data: games
