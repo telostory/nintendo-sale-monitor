@@ -853,6 +853,7 @@ export default function Home() {
               spacing={2} 
               columns={12} 
               direction="column"
+              sx={{ width: '100%' }}
             >
               {games.map((game) => (
                 <Grid 
@@ -863,6 +864,7 @@ export default function Home() {
                   <Card 
                     elevation={2} 
                     sx={{ 
+                      width: '100%',
                       '&:hover': { boxShadow: 6 },
                       transition: 'box-shadow 0.3s',
                       borderRadius: { xs: 2, sm: 1 }
