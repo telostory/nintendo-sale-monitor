@@ -142,7 +142,15 @@ export default function Home() {
         },
       });
       
+      if (response.status === 401) {
+        // 인증 오류는 조용히 처리 (사용자가 새로 로그인한 경우 정상적인 상황)
+        console.log('사용자 인증이 필요합니다. 다시 로그인해주세요.');
+        signOut({ redirect: false }); // 세션이 만료된 경우 로그아웃 처리
+        return;
+      }
+      
       if (!response.ok) {
+        // 401 이외의 오류는 스낵바로 표시 (입력 폼 에러 대신)
         throw new Error('서버에서 게임 목록을 가져오는데 실패했습니다.');
       }
       
@@ -163,7 +171,9 @@ export default function Home() {
       }
     } catch (error) {
       console.error('게임 목록 불러오기 오류:', error);
-      setError('게임 목록을 불러오는데 문제가 발생했습니다.');
+      // 에러 상태를 TextField가 아닌 스낵바에 표시
+      setSnackbarMessage('게임 목록을 불러오는데 문제가 발생했습니다.');
+      setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
@@ -461,17 +471,21 @@ export default function Home() {
 
   const handleAddGame = async () => {
     if (!url) {
-      setError('닌텐도 스토어 URL을 입력해주세요.');
+      // 에러 상태를 TextField에 표시하는 대신 스낵바로 표시
+      setSnackbarMessage('닌텐도 스토어 URL을 입력해주세요.');
+      setSnackbarOpen(true);
       return;
     }
     
     if (!url.includes('nintendo.co.kr') && !url.includes('nintendo.com')) {
-      setError('유효한 닌텐도 스토어 URL이 아닙니다.');
+      // 에러 상태를 TextField에 표시하는 대신 스낵바로 표시
+      setSnackbarMessage('유효한 닌텐도 스토어 URL이 아닙니다.');
+      setSnackbarOpen(true);
       return;
     }
     
     setLoading(true);
-    setError('');
+    setError(''); // 기존 에러 메시지 초기화
     
     try {
       const response = await fetch('/api/game-info', {
@@ -523,7 +537,9 @@ export default function Home() {
       
     } catch (error) {
       console.error('게임 추가 오류:', error);
-      setError(error.message);
+      // 에러 상태를 TextField가 아닌 스낵바에 표시
+      setSnackbarMessage(error.message);
+      setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
@@ -859,7 +875,7 @@ export default function Home() {
           <Typography variant="h5" component="h1" gutterBottom sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }}>
             닌텐도 게임 가격 모니터
           </Typography>
-          <form onSubmit={handleAddGame}>
+          <form onSubmit={e => { e.preventDefault(); handleAddGame(); }}>
             <Box sx={{ 
               display: 'flex', 
               flexDirection: { xs: 'column', sm: 'row' },
@@ -881,6 +897,11 @@ export default function Home() {
                   width: '100%',
                   '& .MuiInputBase-input': {
                     fontSize: { xs: '0.9rem', sm: '1rem' },
+                  },
+                  // 에러 메시지가 표시될 공간 확보
+                  '& .MuiFormHelperText-root': {
+                    position: 'absolute',
+                    bottom: '-20px'
                   }
                 }}
               />
@@ -893,7 +914,7 @@ export default function Home() {
                 sx={{ 
                   mt: { xs: 1, sm: 0 },
                   height: { xs: '40px', sm: '56px' },
-                  alignSelf: { xs: 'flex-start', sm: 'center' },
+                  alignSelf: { xs: 'flex-start', sm: 'flex-start' }, // 상단 정렬로 변경
                   width: { xs: '100%', sm: '120px' },
                   boxSizing: 'border-box'
                 }}
