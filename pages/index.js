@@ -339,7 +339,7 @@ export default function Home() {
                 originalPrice: lastPrice,
                 discountAmount: discountAmount,
                 discountRate: discountRate,
-                formattedDiscount: `-₩${discountAmount.toLocaleString()}`
+                discountFormatted: `-₩${discountAmount.toLocaleString()}`
               };
             }
           }
@@ -454,7 +454,7 @@ export default function Home() {
               originalPrice: lastPrice,
               discountAmount: discountAmount,
               discountRate: discountRate,
-              formattedDiscount: `-₩${discountAmount.toLocaleString()}`
+              discountFormatted: `-₩${discountAmount.toLocaleString()}`
             };
           }
         }
@@ -560,7 +560,14 @@ export default function Home() {
       const koreaTime = new Date(currentDate.getTime() + (9 * 60 * 60 * 1000));
       const today = koreaTime.toISOString().split('T')[0];
       
+      console.log('가격 추출 전:', data.price);
+      // 가격에서 숫자만 추출
       const priceNumber = parseInt(data.price.replace(/[^\d]/g, ''));
+      console.log('추출된 가격 숫자:', priceNumber);
+      
+      if (isNaN(priceNumber)) {
+        throw new Error('가격 정보를 올바르게 추출할 수 없습니다. 다른 게임 URL을 시도해보세요.');
+      }
       
       const newGame = {
         id: Date.now().toString(),
@@ -576,6 +583,8 @@ export default function Home() {
         ],
         lastUpdated: new Date().toISOString()
       };
+      
+      console.log('추가할 게임 정보:', newGame);
       
       if (session && session.user) {
         // 로그인된 경우: 서버에 게임 추가
@@ -628,7 +637,7 @@ export default function Home() {
   };
 
   // 게임 삭제 다이얼로그 열기
-  const openDeleteDialog = (id) => {
+  const handleDeleteDialogOpen = (id) => {
     const gameToDelete = games.find(game => game.id === id);
     if (gameToDelete) {
       setGameToDelete(gameToDelete);
@@ -714,7 +723,7 @@ export default function Home() {
     localStorage.removeItem('monitoredGames');
   };
   
-  const handleGameSelect = (game) => {
+  const handleShowChart = (game) => {
     setSelectedGame(game);
     setChartDialogOpen(true);
   };
@@ -733,6 +742,124 @@ export default function Home() {
         minute: '2-digit'
       })
     : '없음';
+
+  // 날짜 형식 포맷팅 (YYYY.MM.DD)
+  const formatDate = (dateString) => {
+    try {
+      if (!dateString) return '날짜 없음';
+      
+      const date = new Date(dateString);
+      
+      // 유효한 날짜인지 확인
+      if (isNaN(date.getTime())) {
+        console.error('유효하지 않은 날짜:', dateString);
+        return '날짜 오류';
+      }
+      
+      // YYYY.MM.DD 형식으로 변환
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      return `${year}.${month}.${day}`;
+    } catch (error) {
+      console.error('날짜 포맷팅 오류:', error, dateString);
+      return '날짜 오류';
+    }
+  };
+
+  // 게임 카드를 렌더링하는 부분
+  const renderGameCard = (game) => {
+    const lastPrice = game.priceHistory && game.priceHistory.length > 0 
+      ? game.priceHistory[game.priceHistory.length - 1] 
+      : null;
+    
+    // 구매일(첫 기록일) 표시
+    const firstDate = game.priceHistory && game.priceHistory.length > 0 
+      ? formatDate(game.priceHistory[0].date) 
+      : '날짜 없음';
+    
+    // 할인 정보 있는 경우 표시
+    const hasDiscount = lastPrice && lastPrice.discountInfo;
+    
+    return (
+      <Paper key={game.id} sx={{ 
+        mb: 2, 
+        p: 2,
+        position: 'relative'
+      }}>
+        <IconButton 
+          color="error" 
+          onClick={() => handleDeleteDialogOpen(game)}
+          sx={{ 
+            position: 'absolute', 
+            top: 8, 
+            right: 8,
+            p: 0.5
+          }}
+        >
+          <DeleteIcon />
+        </IconButton>
+        
+        <Typography variant="h6" component="h3" sx={{ 
+          fontSize: { xs: '0.95rem', sm: '1.1rem' },
+          mb: 1,
+          pr: 4
+        }}>
+          {game.title}
+        </Typography>
+        
+        <Typography 
+          variant="h5" 
+          component="p" 
+          color="primary"
+          sx={{ 
+            fontWeight: 'bold',
+            color: '#2e7d32',
+            fontSize: { xs: '1.3rem', sm: '1.5rem' },
+            my: 1
+          }}
+        >
+          {lastPrice ? lastPrice.priceFormatted : game.price}
+        </Typography>
+        
+        {hasDiscount && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Chip 
+              label={`-${lastPrice.discountInfo.discountRate}%`} 
+              color="error" 
+              size="small"
+              sx={{ fontWeight: 'bold' }}
+            />
+            <Typography color="error" variant="body2" sx={{ fontWeight: 'bold' }}>
+              {lastPrice.discountInfo.discountFormatted}
+            </Typography>
+          </Box>
+        )}
+        
+        <Box sx={{ 
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mt: 1
+        }}>
+          <Typography variant="caption" color="text.secondary" component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+            추가일: {firstDate}
+          </Typography>
+          <Button 
+            size="small" 
+            variant="outlined" 
+            color="primary"
+            onClick={() => handleShowChart(game)}
+            startIcon={<TimelineIcon />}
+            sx={{ ml: 'auto', fontSize: '0.7rem', py: 0.5 }}
+          >
+            가격 기록 보기
+          </Button>
+        </Box>
+      </Paper>
+    );
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -1034,119 +1161,7 @@ export default function Home() {
                   xs={12} 
                   key={game.id}
                 >
-                  <Paper 
-                    elevation={1} 
-                    sx={{ 
-                      width: '100%',
-                      '&:hover': { boxShadow: 3, cursor: 'pointer' },
-                      transition: 'box-shadow 0.3s',
-                      borderRadius: 1,
-                      boxShadow: '0px 2px 4px -1px rgba(0,0,0,0.1), 0px 1px 2px 0px rgba(0,0,0,0.05)'
-                    }}
-                    onClick={() => window.open(game.url, '_blank', 'noopener,noreferrer')}
-                  >
-                    <Box sx={{ p: { xs: 2, sm: 3 } }}>
-                      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, width: '100%' }}>
-                        <Box sx={{ flexGrow: 1, width: { xs: '100%', sm: 'calc(100% - 60px)' }, mb: { xs: 2, sm: 0 } }}>
-                          <Typography 
-                            variant="h6" 
-                            component="h3" 
-                            sx={{ 
-                              fontSize: { xs: '1rem', sm: '1.1rem' }, 
-                              fontWeight: 'bold',
-                              mb: 1 
-                            }}
-                          >
-                            {game.title}
-                          </Typography>
-                          <Typography 
-                            variant="h5" 
-                            color="success.main" 
-                            sx={{ 
-                              fontWeight: 'bold', 
-                              mb: 1,
-                              fontSize: { xs: '1.25rem', sm: '1.5rem' }
-                            }}
-                          >
-                            {game.price || '가격 정보 없음'}
-                          </Typography>
-                          
-                          {/* 할인 정보 표시 */}
-                          {game.discountInfo && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <Chip 
-                                size="small" 
-                                color="error"
-                                label={`${game.discountInfo.discountRate}% 할인`}
-                                sx={{ fontWeight: 'bold', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                              />
-                              <Typography 
-                                variant="body2" 
-                                color="error.main"
-                                fontWeight="500"
-                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                              >
-                                {game.discountInfo.formattedDiscount}
-                              </Typography>
-                            </Box>
-                          )}
-                          
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                            <Chip 
-                              size="small" 
-                              label={`추가일: ${new Date(game.addedAt).toLocaleDateString()}`}
-                              color="default"
-                              variant="outlined"
-                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                            />
-                            {game.priceHistory && game.priceHistory.length > 0 && (
-                              <Chip 
-                                size="small"
-                                icon={<TimelineIcon />} 
-                                label={`${game.priceHistory.length}개의 가격 기록`}
-                                color="primary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleGameSelect(game);
-                                }}
-                                clickable
-                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-                        
-                        <Box sx={{ 
-                          display: 'flex',
-                          flexDirection: 'row',
-                          justifyContent: { xs: 'flex-start', sm: 'flex-end' },
-                          alignItems: 'center',
-                          width: { xs: '100%', sm: '60px' },
-                          minWidth: { sm: '60px' },
-                          flexShrink: 0,
-                          mt: { xs: 1, sm: 0 }
-                        }}>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            gap: 1,
-                            justifyContent: { xs: 'flex-start', sm: 'flex-end' }
-                          }}>
-                            <IconButton 
-                              color="error"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openDeleteDialog(game.id);
-                              }}
-                              size="small"
-                              title="삭제"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Box>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Paper>
+                  {renderGameCard(game)}
                 </Grid>
               ))}
             </Grid>
